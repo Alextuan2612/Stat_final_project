@@ -1,0 +1,127 @@
+---
+title: "To what extent does mental health alerts, suicide risk alerts, gender and race group predict the length of segregation placement in Ontario correctional facilities in 2018"
+author: "Alex_nguyen"
+date: "2026-03-22"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message = F, echo = F}
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+seg = read.csv("solgen-individuals-in-seg-2018.csv")
+seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>% 
+  rename(Reason = Primary.reason.for.segregation)
+```
+
+# Introduction
+
+This data set contains individual-level records of incarcerated persons placed in segregation within Ontario correctional facilities. Each row represents one individual and includes demographic characteristics such as gender, age category, race group, and faith group. The data also captures clinical indicators including mental health alerts, suicide risk alerts, and suicide watch status. The key outcome variables measure segregation placement length in days and the primary reason for segregation placement.
+
+# Segregation
+
+Segregation (also known as solitary confinement) involves confining incarcerated individuals to their cells for 20-24 hours per day, with limited human contact. In Ontario, the use of segregation has been a subject of significant policy debate and legal scrutiny due to concerns about its psychological impacts, particularly on vulnerable populations. give citation
+
+Research has consistently shown that individuals with mental health conditions and those at risk of suicide are disproportionately placed in segregation and often experience longer durations. However, questions remain about whether these disparities persist after accounting for other factors, and whether gender plays a role in segregation outcomes.
+
+## What are the main reasons for segregation?
+
+To understand the meaning of data, we have to acknowledge the root cause of these numbers first. The following histogram illustrate different reasons to why an inmate may be required to go to segregation.
+
+```{r, echo = F}
+
+seg_reason = seg %>%group_by(Reason) %>% summarise(n = n())
+
+seg_reason = seg_reason%>%arrange(n)
+
+seg_reason = seg_reason %>% mutate(Percentage = round(n/sum(seg_reason$n)*100,1))
+
+seg_reason = seg_reason %>%
+  mutate(Reason = case_when(
+    Reason == "inmate request" ~ "Inmate Request",
+    Reason == "inmate needs protection" ~ "Protect Inmate",
+    Reason == "inmate needs protection: medical" ~ "Protect Inmate: Medical",
+    Reason == "security of institution/safety of others" ~ "Security/Safety",
+    Reason == "security of institution/safety of others: medical" ~ "Security/Safety: Medical",
+    Reason == "alleged misconduct" ~ "Alleged Misconduct",
+    Reason == "close confinement" ~ "Close Confinement",
+    Reason == "multiple reasons" ~ "Multiple Reasons",
+    TRUE ~ "Other"
+  ))
+
+
+ggplot(seg_reason, aes(x = reorder(Reason, n), y = n)) +
+  geom_bar(stat = "identity", fill = "steelblue") + coord_flip() +
+  labs(title = "Figure 1: Primary Reasons for Segregation Placement",
+       subtitle = "Ontario Correctional Facilities, 2018", x = "Reason for Segregation", y = "Number of Individuals") +
+  theme_minimal() +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  geom_text(aes(label = paste0(Percentage, "%")), 
+            hjust = -0.2,  
+            size = 3.5)
+```
+
+Figure 1 displays the primary reasons individuals were placed in segregation in Ontario correctional facilities during 2018. The most common reason was "Protect inmate: Medical" with 771 cases associated to it, taking over 29.2% of the total reasons. Most notably, protection-related reasons including both medical and non-medical accounted for over 37% of placements, suggesting that a portion of segregation use is due to the concerns for inmate safety. Only 1.7% of placements were for "close confinement," indicating this category is relatively rare in practice. Acknowledging these trends can provide important context when analyzing segregation lengths as the reasons can influence duration.
+
+In addition, before delving into finding the relationships between variables, we must first understand how distributed the segregation placement length is. This is because understanding the distribution will allow us to see whether our data is left-skewed, contains outliers or have no particular trend.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+hist_data = ggplot_build(
+  ggplot(seg, aes(x = Seg_length)) + 
+    geom_histogram(bins = 30, fill = "steelblue", color = "white")
+)$data[[1]]
+
+ggplot(seg, aes(x = Seg_length)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.7) +
+  labs(title = "Figure 2. Distribution of Segregation Placement Length",
+       x = "Days in Segregation", 
+       y = "Number of Individuals") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.title.position = "plot") +   geom_text(data = hist_data, aes(x = (xmin + xmax)/2, y = count, label = count),
+                                                    vjust = -0.5, 
+                                                    size = 2.5)
+```
+
+Figure 2 reveals a highly right-skewed distribution of segregation placement lengths. The most frequent duration is close to 0. But note that the segregation placement length is never zero. This happens due to the extreme outlines that skew the histogram. With around 2800 individuals experiencing segregation less than 100 days. While only up to 2 individuals had placements close to 600 days. This suggests that segregation is frequently used for brief periods, for immediate safety concerns. In addition, the skewness of our data highlights the need of bootstrapping in later analyses.
+
+After acknowledging the root cause as well as the overall trend of our datasets, we will now investigate the mean the segregation placement lengths across mental health alert, suicide risk alert, and gender.
+
+```{r}
+# Mean by mental health
+mental_summary = seg %>%
+  group_by(Mental.health.alert) %>% summarise(Count = n(),
+    Mean_days = mean(Seg_length),
+    SD = sd(Seg_length)
+  ) %>% rename(Group = Mental.health.alert)
+mental_summary = add_column(mental_summary, "Variable" =  rep("Mental health alert", 2), .before = "Group")
+
+
+# Mean by suicide risk
+suicide_summary = seg %>%
+  group_by(Suicide.risk.alert) %>% summarise(Count = n(),
+    Mean_days = mean(Seg_length),
+    SD = sd(Seg_length)
+  )%>% rename(Group = Suicide.risk.alert)
+
+suicide_summary = add_column(suicide_summary, "Variable" =  rep("Suicide risk alert", 2), .before = "Group")
+
+
+# Mean by gender
+gender_summary = seg %>%
+  group_by(Gender)%>% summarise(Count = n(),
+    Mean_days = mean(Seg_length),
+    SD = sd(Seg_length)
+  )%>% rename(Group = Gender)
+  
+gender_summary = add_column(gender_summary, "Variable" =  rep("Gender", 2), .before = "Group")
+
+middle_summary= full_join(mental_summary, suicide_summary)
+final_summary = full_join(middle_summary, gender_summary)
+print(final_summary)
+```
