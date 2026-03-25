@@ -126,4 +126,4 @@ final_summary = full_join(middle_summary, gender_summary)
 knitr::kable(final_summary)
 ```
 
-hello alex hello
+hello alex hello freddy
