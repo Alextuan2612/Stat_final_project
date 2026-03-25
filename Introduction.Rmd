@@ -9,7 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r, message = F, echo = F}
+```{r message=FALSE, include=FALSE}
 library(tidyverse)
 library(lubridate)
 library(dplyr)
@@ -90,7 +90,7 @@ ggplot(seg, aes(x = Seg_length)) +
 
 Figure 2 reveals a highly right-skewed distribution of segregation placement lengths. The most frequent duration is close to 0. But note that the segregation placement length is never zero. This happens due to the extreme outlines that skew the histogram. With around 2800 individuals experiencing segregation less than 100 days. While only up to 2 individuals had placements close to 600 days. This suggests that segregation is frequently used for brief periods, for immediate safety concerns. In addition, the skewness of our data highlights the need of bootstrapping in later analyses.
 
-After acknowledging the root cause as well as the overall trend of our datasets, we will now investigate the mean the segregation placement lengths across mental health alert, suicide risk alert, and gender.
+After acknowledging the root cause as well as the overall trend of our data-sets, we will now investigate the mean the segregation placement lengths across mental health alert, suicide risk alert, and gender.
 
 ```{r}
 # Mean by mental health
@@ -123,5 +123,5 @@ gender_summary = add_column(gender_summary, "Variable" =  rep("Gender", 2), .bef
 
 middle_summary= full_join(mental_summary, suicide_summary)
 final_summary = full_join(middle_summary, gender_summary)
-print(final_summary)
+knitr::kable(final_summary)
 ```
