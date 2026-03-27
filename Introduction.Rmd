@@ -125,5 +125,3 @@ middle_summary= full_join(mental_summary, suicide_summary)
 final_summary = full_join(middle_summary, gender_summary)
 knitr::kable(final_summary)
 ```
-
-hello alex hello freddy
