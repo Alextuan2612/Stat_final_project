@@ -1,5 +1,5 @@
 ---
-title: "To what extent does mental health alerts, suicide risk alerts, gender and race group predict the length of segregation placement in Ontario correctional facilities in 2018"
+title: "To what extent does mental health alerts, length of segregation placement, gender and race group predict the suicide risk alert in Ontario correctional facilities in 2018"
 author: "Alex_nguyen"
 date: "2026-03-22"
 output: pdf_document
