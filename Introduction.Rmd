@@ -15,6 +15,7 @@ library(lubridate)
 library(dplyr)
 library(ggplot2)
 library(knitr)
+set.seed(67)
 seg = read.csv("solgen-individuals-in-seg-2018.csv")
 seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>% 
   rename(Reason = Primary.reason.for.segregation)
