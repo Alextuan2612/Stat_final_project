@@ -14,6 +14,7 @@ library(tidyverse)
 library(lubridate)
 library(dplyr)
 library(ggplot2)
+library(knitr)
 seg = read.csv("solgen-individuals-in-seg-2018.csv")
 seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>% 
   rename(Reason = Primary.reason.for.segregation)
@@ -37,7 +38,7 @@ Before conducting formal hypothesis testing and logistic regression, we first ex
 
 #### Mental Health Alerts and Suicide Risk
 
-```{r}
+```{r echo=FALSE, fig.align="center", fig.width=6, fig.height=4}
 mental_suicide = seg %>% group_by(Mental.health.alert, Suicide.risk.alert) %>%
   summarise(count = n(), .groups = "drop") %>%
   group_by(Mental.health.alert) %>% mutate(percentage = count/sum(count) * 100)
@@ -51,9 +52,63 @@ ggplot(mental_suicide, aes(x = factor(Mental.health.alert),
        y = "Proportion",
        fill = "Suicide Risk") +
   scale_y_continuous(labels = scales::percent) +
-  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = rel(0.8)))
 ```
 
 Figure 1 displays the proportion of individuals with suicide risk alerts stratified by mental health status. The stacked bar chart allows for direct comparison between two groups, including individuals without mental health alerts and individuals with mental health alerts.
 
 Among individuals without mental health alerts, approximately 25% have a suicide risk alert, meaning that three-quarters of this group show no suicide risk flag. On the other hand, among individuals with mental health alerts, approximately 50% have a suicide risk alert. We can observe a pattern which reveals a strong positive association between mental health status and suicide risk identification. Individuals flagged for mental health concerns are more likely to also be flagged for suicide risk compared to those without mental health alerts. The difference of approximately 25 percentage suggests that mental health status may be the most important predictors of suicide risk in this sample.
+
+This align with what is expected. As mental health conditions can be a risk factors for suicidal behavior. In the given settings, where mental health can be negated, it can easily lead to high suicidal risk.
+
+#### Segregation length and Suicide Risk
+
+Before examining the relationship between segregation length and suicide risk, we must first address the presence of extreme outliers in the segregation length variable. Table 1 summarizes the outlier statistics for individuals with and without suicide risk alerts.
+
+```{r echo=FALSE}
+getting_outliers = function(seg_length){
+  Q1 = quantile(seg_length, 0.25, na.rm = TRUE)
+  Q3 = quantile(seg_length, 0.75, na.rm = TRUE)
+  IQR = Q3 - Q1
+  lower_bound = Q1 - 1.5 * IQR
+  upper_bound = Q3 + 1.5 * IQR
+  outliers = seg_length[seg_length > upper_bound | seg_length < lower_bound]
+  return(list(outliers = outliers, upper_bound = upper_bound))
+  
+}
+
+seg_no_risk = seg$Seg_length[seg$Suicide.risk.alert == "No"]
+seg_yes_risk = seg$Seg_length[seg$Suicide.risk.alert == "Yes"]
+
+outlier_no = getting_outliers(seg_no_risk)
+outlier_yes = getting_outliers(seg_yes_risk)
+
+
+outlier_table = data.frame(
+  Suicide_Risk = c("No", "Yes"),
+  Total_N = c(length(seg_no_risk), length(seg_yes_risk)),
+  Outlier_Count = c(length(outlier_no$outliers), length(outlier_yes$outliers)),
+  Outlier_Percent = c(round(length(outlier_no$outliers) / length(seg_no_risk) * 100, 1),
+                      round(length(outlier_yes$outliers) / length(seg_yes_risk) * 100, 1)),
+  Outlier_Range = c(paste(round(min(outlier_no$outliers), 1), "-", round(max(outlier_no$outliers), 1)),
+                    paste(round(min(outlier_yes$outliers), 1), "-", round(max(outlier_yes$outliers), 1)))
+)
+kable(outlier_table, 
+      caption = "Outlier Summary by Suicide Risk Status",
+      col.names = c("Suicide Risk", "Total N", "Outlier Count", "Outlier (%)", "Outlier Range"),
+      align = c('l', 'c', 'c', 'c', 'c'))
+```
+
+Table 1 reveals that outliers are present in both groups at very high rates such as 14.0% of individuals without suicide risk alerts and 14.4% of individuals with suicide risk alerts are classified as outliers. This indicates that extreme segregation lengths are not disproportionately concentrated in either group. The outlier ranges extend up to approximately 600 days in both categories, demonstrating that while some individuals experience exceptionally long segregation placements, these extreme cases occur with similar frequency regardless of suicide risk status.
+
+```{r echo=FALSE}
+ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")), 
+                          y = Seg_length)) +
+  geom_boxplot(fill = c("lightblue", "salmon")) +
+  coord_cartesian(ylim = c(0, quantile(seg$Seg_length, 0.95))) +
+  labs(title = "Segregation Placement Length by Suicide Risk Status",
+       x = "Suicide Risk Alert", 
+       y = "Days in Segregation") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```

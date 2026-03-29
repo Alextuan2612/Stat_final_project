@@ -26,7 +26,44 @@ ggplot(mental_suicide, aes(x = factor(Mental.health.alert, labels = c("No MH Ale
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 
+
+
+
 # Graph 2
+getting_outliers = function(seg_length){
+  Q1 = quantile(seg_length, 0.25, na.rm = TRUE)
+  Q3 = quantile(seg_length, 0.75, na.rm = TRUE)
+  IQR = Q3 - Q1
+  lower_bound = Q1 - 1.5 * IQR
+  upper_bound = Q3 + 1.5 * IQR
+  outliers = seg_length[seg_length > upper_bound | seg_length < lower_bound]
+  return(list(outliers = outliers, upper_bound = upper_bound))
+  
+}
+
+seg_no_risk = seg$Seg_length[seg$Suicide.risk.alert == "No"]
+seg_yes_risk = seg$Seg_length[seg$Suicide.risk.alert == "Yes"]
+
+outlier_no = calculate_outliers(seg_no_risk)
+outlier_yes = calculate_outliers(seg_yes_risk)
+
+
+outlier_table = data.frame(
+  Suicide_Risk = c("No", "Yes"),
+  Total_N = c(length(seg_no_risk), length(seg_yes_risk)),
+  Outlier_Count = c(length(outlier_no$outliers), length(outlier_yes$outliers)),
+  Outlier_Percent = c(round(length(outlier_no$outliers) / length(seg_no_risk) * 100, 1),
+                      round(length(outlier_yes$outliers) / length(seg_yes_risk) * 100, 1)),
+  Outlier_Range = c(paste(round(min(outlier_no$outliers), 1), "-", round(max(outlier_no$outliers), 1)),
+                    paste(round(min(outlier_yes$outliers), 1), "-", round(max(outlier_yes$outliers), 1)))
+)
+
+
+
+
+
+
+
 ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")), 
                           y = Seg_length)) +
   geom_boxplot(fill = c("lightblue", "salmon"), outlier.shape = NA) +
