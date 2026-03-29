@@ -114,9 +114,37 @@ ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")),
 ```
 
 ```{r echo= FALSE}
-seg_t_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~ 1, TRUE ~ 0))
-t.test(Suicide_binary~Gender, data = seg_t_test,
-alternative = "two.sided",
-conf.level = 0.95,
-var.equal=FALSE)
+seg_perm_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~ 1, TRUE ~ 0)) %>% select(Suicide_binary, Gender)
+obs.diff = mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Male"]) - mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Female"])
+perm.function = function(){
+temp_group_ind = sample(seg_perm_test$Gender)
+d = mean(seg_perm_test$Suicide_binary[temp_group_ind== "Male"]) - mean(seg_perm_test$Suicide_binary[temp_group_ind== "Female"])
+return(d)
+}
+perm_diff = replicate(10000, perm.function())
+hist(perm_diff)
+abline(v=obs.diff,lwd=2,col="blue")
+mean(abs(perm_diff) > abs(obs.diff))
+```
+
+```{r}
+
+boot_function=function(){
+boot.d = seg_perm_test %>% sample_n(nrow(seg_perm_test), replace=T)
+d = mean(boot.d$Suicide_binary[boot.d$Gender == "Male"]) -
+      mean(boot.d$Suicide_binary[boot.d$Gender == "Female"])
+return(d)
+}
+output = replicate(1000, boot_function())
+quantile(output, c(0.025,0.975))
+```
+
+```{r}
+
+seg_regression = seg %>% 
+  mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
+         Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
+         Gender_binary = ifelse(Gender == "Male",1,0))
+m = glm(Suicide_binary ~ Gender, family = binomial, data = seg_regression)
+summary(m)
 ```
