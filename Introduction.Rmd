@@ -114,10 +114,9 @@ ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")),
 ```
 
 ```{r echo= FALSE}
-seg_male = seg %>% filter(Gender == 'Male')
-seg_male = seg_male %>% mutate(Suicide_binary = case_when('Suicide risk alert' == 'Yes' ~ 1, TRUE ~ 0))
-seg_male_mean = mean(Suicide_binary)
-seg_female = seg %>% filter(Gender == 'Female')
-seg_female = seg_female %>% mutate(Suicide_binary = case_when('Suicide risk alert' == 'Yes' ~ 1, TRUE ~ 0))
-seg_female_mean = mean(Suicide_binary)
+seg_t_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~ 1, TRUE ~ 0))
+t.test(Suicide_binary~Gender, data = seg_t_test,
+alternative = "two.sided",
+conf.level = 0.95,
+var.equal=FALSE)
 ```
