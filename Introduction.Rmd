@@ -16,6 +16,7 @@ library(lubridate)
 library(dplyr)
 library(ggplot2)
 library(knitr)
+set.seed(67)
 seg = read.csv("solgen-individuals-in-seg-2018.csv")
 seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>% 
   rename(Reason = Primary.reason.for.segregation)
@@ -127,6 +128,10 @@ hist(perm_diff)
 abline(v=obs.diff,lwd=2,col="blue")
 mean(abs(perm_diff) > abs(obs.diff))
 ```
+
+**Hypothesis Testing Between Gender and Suicide Risk**
+
+As suicide risk alert in Ontario correctional facilities in 2018 is the dependent variable in the research question, it is important to determine whether other variables in the data set can have an impact on the dependent variable. In order to find out whether the gender of the segregated person can have an impact on their suicide risk, the data set is split into two groups based on the gender of the segregated people. Then, we assume that gender should have no impact on the suicide risk of incarcerated peoples, so the sample mean of the males in the group should be equal to the sample mean of the females in the group. The result of the test indicate that the null hypothesis can be rejected, since the p-value is 0.0444, which is less than 0.05. This suggests that gender should not have a significant impact on the suicide risk of incarcerated peoples in this data set.
 
 ```{r}
 
