@@ -124,14 +124,22 @@ d = mean(seg_perm_test$Suicide_binary[temp_group_ind== "Male"]) - mean(seg_perm_
 return(d)
 }
 perm_diff = replicate(10000, perm.function())
+quantile(output, c(0.025,0.975))
 hist(perm_diff)
 abline(v=obs.diff,lwd=2,col="blue")
 mean(abs(perm_diff) > abs(obs.diff))
+
+seg_perm_male = seg_perm_test %>% filter(Gender == "Male")
+seg_perm_female = seg_perm_test %>% filter(Gender == "Female")
+mean(seg_perm_male$Suicide_binary)
+mean(seg_perm_female$Suicide_binary)
+mean_diff = mean(seg_perm_male$Suicide_binary) - mean(seg_perm_female$Suicide_binary)
+mean_diff
 ```
 
 **Hypothesis Testing Between Gender and Suicide Risk**
 
-As suicide risk alert in Ontario correctional facilities in 2018 is the dependent variable in the research question, it is important to determine whether other variables in the data set can have an impact on the dependent variable. In order to find out whether the gender of the segregated person can have an impact on their suicide risk, the data set is split into two groups based on the gender of the segregated people. Then, we assume that gender should have no impact on the suicide risk of incarcerated peoples, so the sample mean of the males in the group should be equal to the sample mean of the females in the group. The result of the test indicate that the null hypothesis can be rejected, since the p-value is 0.0444, which is less than 0.05. This suggests that gender should not have a significant impact on the suicide risk of incarcerated peoples in this data set.
+As suicide risk alert in Ontario correctional facilities in 2018 is the dependent variable in the research question, it is important to determine whether other variables in the data set can have an impact on the dependent variable. In order to find out whether the gender of the segregated person can have an impact on their suicide risk, the data set is split into two groups based on the gender of the segregated people. Then, we assume that gender should have no impact on the suicide risk of incarcerated peoples, so the sample mean of the males in the group should be equal to the sample mean of the females in the group. The result of the test indicate that the null hypothesis can be rejected, since the p-value is 0.0444, which is less than 0.05. This suggests that gender should not have a significant impact on the suicide risk of incarcerated peoples in this data set. Additionally, the difference between the mean of the males in the data set and the females in the data set is around -0.05, which means that even if the gender does not have a significant impact, there are more suicide alerts proportionally for female prisoners. The 95% confidence interval of this difference is between -0.11 at the 2.5 percentile and -0.001 at the 97.5 percentile of the data set.
 
 ```{r}
 
@@ -143,6 +151,13 @@ return(d)
 }
 output = replicate(1000, boot_function())
 quantile(output, c(0.025,0.975))
+
+seg_perm_male = seg_perm_test %>% filter(Gender == "Male")
+seg_perm_female = seg_perm_test %>% filter(Gender == "Female")
+mean(seg_perm_male$Suicide_binary)
+mean(seg_perm_female$Suicide_binary)
+mean_diff = mean(seg_perm_male$Suicide_binary) - mean(seg_perm_female$Suicide_binary)
+mean_diff
 ```
 
 ```{r}
