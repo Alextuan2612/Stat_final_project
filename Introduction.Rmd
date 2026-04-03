@@ -42,7 +42,7 @@ Before conducting formal hypothesis testing and logistic regression, we first ex
 
 #### Mental Health Alerts and Suicide Risk
 
-```{r echo=FALSE, fig.align="center", fig.width=6, fig.height=4}
+```{r echo=FALSE, fig.align="center", fig.width=5, fig.height=3}
 mental_suicide = seg %>% group_by(Mental.health.alert, Suicide.risk.alert) %>%
   summarise(count = n(), .groups = "drop") %>%
   group_by(Mental.health.alert) %>% mutate(percentage = count/sum(count) * 100)
@@ -65,7 +65,7 @@ Among individuals without mental health alerts, approximately 25% have a suicide
 
 This align with what is expected. As mental health conditions can be a risk factors for suicidal behavior. In the given settings, where mental health can be negated, it can easily lead to high suicidal risk.
 
-#### Segregation length and Suicide Risk
+#### Segregation length and Suicide Risk \newline
 
 Before examining the relationship between segregation length and suicide risk, we must first address the presence of extreme outliers in the segregation length variable. Table 1 summarizes the outlier statistics for individuals with and without suicide risk alerts.
 
@@ -107,7 +107,7 @@ Table 1 reveals that outliers are present in both groups at very high rates such
 
 As documented in Table 1, outliers are prevalent in both groups (14.0% and 14.4%), necessitating a truncated view of the data to focus on the central tendency. Figure 4 presents the distribution of segregation placement length by suicide risk status, with the y-axis limited to the 85th percentile to reduce visual distortion caused by extreme outliers.
 
-```{r echo=FALSE, fig.align="center", fig.width=6, fig.height=4}
+```{r echo=FALSE, fig.align="center", fig.width=5, fig.height=3}
 ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")), 
                           y = Seg_length)) +
   geom_boxplot(fill = c("lightblue", "salmon")) +
@@ -116,7 +116,7 @@ ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")),
        x = "Suicide Risk Alert", 
        y = "Days in Segregation") +
   theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = rel(0.8)))
 ```
 
 The boxplot reveals that individuals with suicide risk alerts have a mean segregation length only approximately 2 days higher than those without. Given the small magnitude of this difference and the substantial overlap in the interquartile ranges between groups, segregation length does not appear to be a strong or meaningful predictor of suicide risk status in this population. This suggests that other factors, such as mental health alerts, likely play a more important role in identifying individuals at risk of suicide later on when we do the regression.
@@ -137,8 +137,8 @@ $$H_1: p_m \neq p_f$$
 
 Where $p_m$ represents the true proportion of males with suicide risk alerts, and $p_f$ represents the true proportion of females with suicide risk alerts.
 
-```{r echo=F, fig.align="center", fig.width=6, fig.height=4}
-seg_perm_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~ 1, TRUE ~ 0)) %>% select(Suicide_binary, Gender)
+```{r echo=F, fig.align="center", fig.width=5, fig.height=3}
+seg_perm_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~1, TRUE ~ 0)) %>% select(Suicide_binary, Gender)
 obs.diff = mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Male"]) - mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Female"])
 
 perm.function = function(){
@@ -149,22 +149,23 @@ perm.function = function(){
 
 perm_diff = replicate(5000, perm.function())
 ci = quantile(perm_diff, c(0.025, 0.975))
-
-hist(perm_diff, 
-     main = "Figure 3: Permutation Distribution of Gender Differences in Suicide Risk",
-     xlab = "Difference in Proportion (Male - Female)",
-     col = "lightgray", 
-     border = "white")
-abline(v = obs.diff, lwd = 2, col = "blue")
-abline(v = ci, lwd = 2, col = "red", lty = 2)
-legend("topright", 
-       legend = c("Observed Difference", "95% Confidence Interval"),
-       col = c("blue", "red"), 
-       lwd = 2, 
-       lty = c(1, 2))
-
-mean(abs(perm_diff) > abs(obs.diff)) #p-value
-obs.diff
+perm_df = data.frame(diff = perm_diff)
+ggplot(perm_df, aes(x = diff)) +
+  geom_histogram(fill = "lightgray", color = "white", bins = 30) +
+  geom_vline(xintercept = obs.diff, color = "blue", linewidth = 1.2) +
+  geom_vline(xintercept = ci, color = "red", linetype = "dashed", linewidth = 1.2) +
+  labs(title = "Figure 3: Permutation Distribution of Gender Differences in Suicide Risk",
+       x = "Difference in Proportion (Male - Female)",
+       y = "Frequency") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 10),     
+    axis.title = element_text(size = 9),  
+    axis.text = element_text(size = 8),        
+    legend.text = element_text(size = 8)       
+  )
+#mean(abs(perm_diff) > abs(obs.diff)) #p-value
+#obs.diff
 
 ##seg_perm_male = seg_perm_test %>% filter(Gender == "Male")
 ##seg_perm_female = seg_perm_test %>% filter(Gender == "Female")
