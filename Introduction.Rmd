@@ -121,11 +121,11 @@ ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")),
 
 The boxplot reveals that individuals with suicide risk alerts have a mean segregation length only approximately 2 days higher than those without. Given the small magnitude of this difference and the substantial overlap in the interquartile ranges between groups, segregation length does not appear to be a strong or meaningful predictor of suicide risk status in this population. This suggests that other factors, such as mental health alerts, likely play a more important role in identifying individuals at risk of suicide later on when we do the regression.
 
-#### **Hypothesis testing**
+#### **Hypothesis testing** \newline
 
 Having explored the relationships between each predictor and suicide risk alerts through visualizations, we now turn into doing hypothesis testing between different groups. Hypothesis testing allows us to determine whether observed differences between groups are significant or likely due to random chance.
 
-##### Permutation Test for Gender Differences
+##### Permutation Test for Gender Differences \newline
 
 This section focuses on the relationship between gender and suicide risk alerts. Specifically, we test whether the proportion of individuals with suicide risk alerts differs between males and females in Ontario correctional facilities in 2018. Because the data may not meet the normality assumptions required for a standard two-sample proportion test, we employ a permutation test. This approach involves randomly shuffling the gender labels across observations many times (10,000 permutations) to generate a distribution of differences expected under the null hypothesis. The observed difference is then compared to this null distribution to determine the significance.
 
@@ -196,7 +196,7 @@ The p-value of 0.0442 is less than the significance level of 0.05. This means th
 
 Based on the p-value of 0.0442, we reject the null hypothesis at the α = 0.05 significance level. There is statistically significant evidence that the proportion of suicide risk alerts differs between males and females in Ontario correctional facilities in 2018.
 
-However, several important caveats warrant discussion. First, while the result is statistically significant, the 95% confidence interval includes zero, indicating uncertainty about the direction of the effect. This apparent contradiction occurs because the p-value is very close to the significance threshold, and the confidence interval is calculated using a different method. Second, the magnitude of any true gender difference appears to be small, as the confidence interval spans only approximately 5 percentage points in either direction.
+While the result is statistically significant, the 95% confidence interval includes zero, indicating uncertainty about the direction of the effect. This apparent contradiction occurs because the p-value is very close to the significance threshold, and the confidence interval is calculated using a different method. Second, the magnitude of any true gender difference appears to be small, as the confidence interval spans only approximately 5 percentage points in either direction.
 
 From a practical perspective, while gender may be a statistically significant predictor of suicide risk alerts, its substantive importance may be limited. The small effect size suggests that gender alone is unlikely to be a strong or reliable predictor of suicide risk in correctional settings. Other factors, such as mental health status, likely play a more meaningful role in identifying individuals at risk of suicide.
 
