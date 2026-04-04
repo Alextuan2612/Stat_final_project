@@ -18,7 +18,6 @@ library(lubridate)
 library(dplyr)
 library(ggplot2)
 library(knitr)
-set.seed(67)
 seg = read.csv("solgen-individuals-in-seg-2018.csv")
 seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>% 
   rename(Reason = Primary.reason.for.segregation)
@@ -86,8 +85,6 @@ seg_yes_risk = seg$Seg_length[seg$Suicide.risk.alert == "Yes"]
 
 outlier_no = getting_outliers(seg_no_risk)
 outlier_yes = getting_outliers(seg_yes_risk)
-
-
 outlier_table = data.frame(
   Suicide_Risk = c("No", "Yes"),
   Total_N = c(length(seg_no_risk), length(seg_yes_risk)),
@@ -123,7 +120,7 @@ The boxplot reveals that individuals with suicide risk alerts have a mean segreg
 
 #### **Hypothesis testing** \newline
 
-Having explored the relationships between each predictor and suicide risk alerts through visualizations, we now turn into doing hypothesis testing between different groups. Hypothesis testing allows us to determine whether observed differences between groups are significant or likely due to random chance.
+Having explored the relationships between each predictor and suicide risk alerts through visualizations, we now turn to hypothesis testing between different groups. Hypothesis testing allows us to determine whether observed differences between groups are significant or likely due to random chance.
 
 ##### Permutation Test for Gender Differences \newline
 
@@ -147,25 +144,38 @@ perm.function = function(){
   return(d)
 }
 
+boot.function = function(){
+  boot_male = seg_perm_test %>% filter(Gender == "Male") %>% 
+    sample_n(n(), replace=T)
+  boot_female = seg_perm_test %>% filter(Gender == "Female") %>% 
+    sample_n(n(), replace=T)
+  
+  d = mean(boot_male$Suicide_binary[boot_male$Gender == "Male"]) -
+  mean(boot_female$Suicide_binary[boot_female$Gender == "Female"])
+  return(d)
+}
+set.seed(67)
+
 perm_diff = replicate(5000, perm.function())
-ci = quantile(perm_diff, c(0.025, 0.975))
+
+set.seed(67)
+
+ci_boot = replicate(1000, boot.function())
+
+ci = quantile(ci_boot, c(0.025, 0.975))
+ci
+
 perm_df = data.frame(diff = perm_diff)
 ggplot(perm_df, aes(x = diff)) +
   geom_histogram(fill = "lightgray", color = "white", bins = 30) +
   geom_vline(xintercept = obs.diff, color = "blue", linewidth = 1.2) +
-  geom_vline(xintercept = ci, color = "red", linetype = "dashed", linewidth = 1.2) +
   labs(title = "Figure 3: Permutation Distribution of Gender Differences in Suicide Risk",
        x = "Difference in Proportion (Male - Female)",
        y = "Frequency") +
   theme_minimal() +
-  theme(
-    plot.title = element_text(size = 10),     
-    axis.title = element_text(size = 9),  
-    axis.text = element_text(size = 8),        
-    legend.text = element_text(size = 8)       
-  )
-#mean(abs(perm_diff) > abs(obs.diff)) #p-value
-#obs.diff
+  theme(plot.title = element_text(size = 10),     axis.title = element_text(size = 9), axis.text = element_text(size = 8),legend.text = element_text(size = 8))
+mean(abs(perm_diff) > abs(obs.diff)) #p-value
+obs.diff
 
 ##seg_perm_male = seg_perm_test %>% filter(Gender == "Male")
 ##seg_perm_female = seg_perm_test %>% filter(Gender == "Female")
@@ -183,42 +193,47 @@ results_table <- data.frame(
   Statistic = c("Observed Difference (Male - Female)", 
                 "95% Confidence Interval", 
                 "P-value"),
-  Value = c("-0.053", "(-0.053, 0.051)", "0.045")
+  Value = c("-0.0530", "(-0.105,-0.001)", "0.0474")
 )
 kable(results_table, caption = "Table 2: Permutation Test Results for Gender Differences in Suicide Risk")
 ```
 
-Figure 3 displays the permutation distribution of differences in suicide risk proportions between males and females under the null hypothesis. The blue vertical line represents the observed difference in the actual data, while the red dashed lines indicate the 95% confidence interval.
+Figure 3 displays the permutation distribution of differences in suicide risk proportions between males and females under the null hypothesis. The blue vertical line represents the observed difference in the actual data. The 95% confidence interval for the difference in proportions, based on bootstrap methods, ranges from -0.105 to -0.001. This interval does not cross zero, indicating that the true population difference is negative, meaning males have a lower proportion of suicide risk alerts than females.
 
-The 95% confidence interval for the difference in proportions ranges from -0.053 to 0.051. This interval crosses zero, indicating that the true population difference could be negative, zero, or positive. However, the interval is narrow and nearly centered around zero, suggesting that if a true difference exists, it is likely small in magnitude.
+The observed difference in proportions was -0.053, indicating that males had a 5.3 percentage point lower proportion of suicide risk alerts compared to females. The p-value of 0.0474 is less than the conventional significance level of 0.05. This means that if the null hypothesis were true (no difference between genders), the probability of observing a difference as extreme as the one we observed is approximately 4.7%. Based on this p-value, we reject the null hypothesis at the α = 0.05 significance level. There is significant evidence that the proportion of suicide risk alerts differs between males and females in Ontario correctional facilities in 2018.
 
-The p-value of 0.0442 is less than the significance level of 0.05. This means that if the null hypothesis were true (no difference between genders), the probability of observing a difference as extreme as the one we observed is approximately 4.4%.
+While the confidence interval does not cross zero, the upper bound is extremely close to zero (-0.001), indicating that the true difference may be negligible. Second, the magnitude of the gender difference is small, only 5.3 percentage points. From a practical perspective, while gender may be a significant predictor of suicide risk alerts, its importance may be limited. The small effect size suggests that gender alone is unlikely to be a strong or reliable predictor of suicide risk. Other factors, such as mental health status, likely play a more meaningful role in identifying individuals at risk of suicide.
 
-Based on the p-value of 0.0442, we reject the null hypothesis at the α = 0.05 significance level. There is statistically significant evidence that the proportion of suicide risk alerts differs between males and females in Ontario correctional facilities in 2018.
+##### Permutation Test for Mental Health Alert Differences \newline
 
-While the result is statistically significant, the 95% confidence interval includes zero, indicating uncertainty about the direction of the effect. This apparent contradiction occurs because the p-value is very close to the significance threshold, and the confidence interval is calculated using a different method. Second, the magnitude of any true gender difference appears to be small, as the confidence interval spans only approximately 5 percentage points in either direction.
+```{r echo=F, fig.align="center", fig.width=5, fig.height=3}
+seg_mental_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~1, TRUE ~ 0)) %>% select(Suicide_binary, Mental.health.alert)
 
-From a practical perspective, while gender may be a statistically significant predictor of suicide risk alerts, its substantive importance may be limited. The small effect size suggests that gender alone is unlikely to be a strong or reliable predictor of suicide risk in correctional settings. Other factors, such as mental health status, likely play a more meaningful role in identifying individuals at risk of suicide.
+obs.diff_2 = mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert== "Yes"]) - mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert== "No"])
 
-```{r}
+perm_function_2 = function(){
+  temp_group_ind = sample(seg_mental_test$Mental.health.alert, replace = T)
+  d = mean(seg_mental_test$Suicide_binary[temp_group_ind== "Yes"]) - mean(seg_mental_test$Suicide_binary[temp_group_ind== "No"])
+  return(d)
+}
 
-seg_regression = seg %>% 
-  mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
-         Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
-         Gender_binary = ifelse(Gender == "Male",1,0))
-m = glm(Suicide_binary ~ Gender_binary+Mental_binary + Seg_length + Reason, family = binomial, data = seg_regression)
-summary(m)
-library(pROC)
-p = predict(m, type = "response")
-roc_logit = roc(seg_regression$Suicide_binary ~ p)
-ggroc(roc_logit, color="red", size=2)
-auc(roc_logit)
-```
-
-```{r}
-library(rpart)
-m2 = rpart(Suicide_binary ~ Gender_binary + Mental_binary + Seg_length +Reason,
-data = seg_regression, method="class")
-library(rattle)
-fancyRpartPlot(m2)
+perm_diff_2 = replicate(5000, perm_function_2())
+ci_2 = quantile(perm_diff_2, c(0.025, 0.975))
+ci_2
+perm_df_2 = data.frame(diff = perm_diff_2)
+ggplot(perm_df_2, aes(x = diff)) +
+  geom_histogram(fill = "lightgray", color = "white", bins = 30) +
+  geom_vline(xintercept = obs.diff_2, color = "blue", linewidth = 1.2) +
+  geom_vline(xintercept = ci_2, color = "red", linetype = "dashed", linewidth = 1.2) +
+  labs(title = "Figure 3: Permutation Distribution of Gender Differences in Suicide Risk",
+       x = "Difference in Proportion (Male - Female)",
+       y = "Frequency") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10),     axis.title = element_text(size = 9), axis.text = element_text(size = 8),legend.text = element_text(size = 8))
+mean(abs(perm_diff_2) > abs(obs.diff_2)) #p-value
+obs.diff_2
+t.test(Suicide_binary~Mental.health.alert, data = seg_mental_test,
+alternative = "two.sided",
+conf.level = 0.95,
+var.equal=F)
 ```

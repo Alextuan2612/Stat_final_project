@@ -108,5 +108,29 @@ ggplot(race_suicide, aes(x = Race.group,
   coord_flip() +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+prop.table(table(seg$Mental.health.alert, seg$Suicide.risk.alert), margin = 1)
+
+
+{r}
+
+seg_regression = seg %>% 
+  mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
+         Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
+         Gender_binary = ifelse(Gender == "Male",1,0))
+m = glm(Suicide_binary ~ Gender_binary+Mental_binary + Seg_length + Reason, family = binomial, data = seg_regression)
+summary(m)
+library(pROC)
+p = predict(m, type = "response")
+roc_logit = roc(seg_regression$Suicide_binary ~ p)
+ggroc(roc_logit, color="red", size=2)
+auc(roc_logit)
+
+{r}
+library(rpart)
+m2 = rpart(Suicide_binary ~ Gender_binary + Mental_binary + Seg_length +Reason,
+           data = seg_regression, method="class")
+library(rattle)
+fancyRpartPlot(m2)
+
 
 
