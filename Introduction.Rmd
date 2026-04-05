@@ -20,6 +20,7 @@ library(ggplot2)
 library(knitr)
 library(broom)
 library(pROC)
+library(rpart)
 seg = read.csv("solgen-individuals-in-seg-2018.csv")
 seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>% 
   rename(Reason = Primary.reason.for.segregation)
@@ -248,7 +249,7 @@ perm_df_2 = data.frame(diff = perm_diff_2)
 ggplot(perm_df_2, aes(x = diff)) +
   geom_histogram(fill = "lightgray", color = "white", bins = 30) +
   geom_vline(xintercept = obs.diff_2, color = "blue", linewidth = 1.2) +
-  labs(title = "Figure 3: Permutation Distribution of Mental Health Differences in Suicide Risk",
+  labs(title = "Figure 4: Permutation Distribution of Mental Health Differences in Suicide Risk",
        x = "Difference in Proportion (With mental health - Without mental health)",
        y = "Frequency") +
   theme_minimal() +
@@ -299,7 +300,7 @@ p = predict(m, type = "response")
 roc_logit = roc(seg_regression$Suicide_binary ~ p)
 auc_value = auc(roc_logit)
 ggroc(roc_logit, color = "red", size = 1.2) +
-  labs(title = "Figure 4: ROC Curve for Logistic Regression Model",
+  labs(title = "Figure 5: ROC Curve for Logistic Regression Model",
        subtitle = paste("Predicting Suicide Risk Alerts | AUC =", round(auc_value, 4)),
        x = "1 - Specificity (False Positive Rate)",
        y = "Sensitivity (True Positive Rate)") +
@@ -313,6 +314,48 @@ ggroc(roc_logit, color = "red", size = 1.2) +
 ```
 
 Before examining individual coefficients, we assess the overall performance of the model. The Area Under the Curve is 0.6761, indicating moderate discriminative ability. An AUC of 0.5 represents random guessing, while 1.0 represents perfect prediction. Our value of 0.676 suggests the model correctly distinguishes between individuals with and without suicide risk alerts approximately 68% of the time. This moderate AUC indicates that while our predictors are statistically significant in some cases, they do not fully capture the complexity of suicide risk identification in correctional settings. Other unmeasured factors, such as prior suicide attempts, current medication, access to mental health care, or institutional environment, can play more important roles.
+
+To validate the performance of our logistic regression model and ensure that the AUC value of 0.676 is not overfit to our specific sample, we performed 4-fold cross-validation. This technique involves randomly the dataset into four equally sized subsets. The model is then trained on three of the four folds (75% of the data) and tested on the remaining fold (25% of the data). This process is repeated four times, with each fold serving as the test set exactly once. The AUC is calculated for each iteration, and the average AUC across all four folds provides a more reliable estimate of how the model would perform on unseen data.
+
+```{r echo=FALSE, message = F}
+k=4
+set.seed(67)
+seg_validate = seg %>% mutate(group_ind = sample(c(1:k), size = nrow(seg), replace = T))
+
+seg_validate = seg_validate %>% 
+  mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
+         Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
+         Gender_binary = ifelse(Gender == "Male",1,0))
+
+c.index = vector()
+for (i in 1:k){
+  d.train = seg_validate %>% filter(group_ind != i)
+  d.test = seg_validate %>% filter(group_ind == i)
+  
+  logit.mod = glm(Suicide_binary ~ Gender_binary + Mental_binary + Seg_length, 
+                  family = binomial, 
+                  data = d.train)
+  
+  pi_hat = predict(logit.mod, newdata=d.test, type = "response")
+  
+  m.roc=roc(d.test$Suicide_binary ~ pi_hat)
+
+  c.index[i]=auc(m.roc)
+}
+c.index
+mean(c.index)
+cv_results = data.frame(Fold = c(1, 2, 3, 4),AUC = c.index)
+
+cv_results = rbind(cv_results, data.frame(Fold = "Mean", AUC = mean(c.index)))
+
+kable(cv_results, 
+      caption = "4-Fold Cross-Validation Results for Logistic Regression Model",
+      col.names = c("Fold", "AUC"),
+      digits = 3)
+
+```
+
+The 4-fold cross-validation produced AUC values ranging from 0.651 to 0.691 across the four folds, with a mean AUC of 0.667. This mean is nearly identical to the original AUC of 0.676, differing by only 0.009. The small difference between the original and cross-validated AUC suggests that our model is not overfitted and is likely to generalize reasonably well to new data. Therefore, we can proceed to intepret the coefficient and determine whether the variables help to predict suicide risk alert or not.
 
 ```{r echo=FALSE}
 results_table <- tidy(m) %>%
@@ -332,6 +375,7 @@ results_table <- tidy(m) %>%
 
 # Display table
 kable(results_table, caption = "Logistic Regression Results for Suicide Risk Alerts")
+
 ```
 
 Each of the p-value in the table is calculated against the null hypothesis that the coefficient of the corresponding predictor should be 0. This means that if the p-value is too small, then we can reject the null hypothesis that the predictor/variable is not needed for this model.
@@ -345,12 +389,9 @@ Lastly, the coefficient for variable segregation length is 0.0001 with p-value o
 Logistic regression confirms that mental health alerts are the strongest and most reliable predictor of suicide risk alerts in this population. Gender and segregation length do not contribute significant independent explanatory power. These findings highlight the critical importance of mental health assessment and treatment in correctional settings for suicide prevention efforts.
 
 \pagebreak
-## Final Summary
 
-# please change if needed...
+## Final Summary
 
 Overall, the results in this report suggests that mental health alert is the strongest predictor of suicide risk alert in this data set. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In conclusion, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
 
 \pagebreak
-## Appendix
-# ????? do we need this
