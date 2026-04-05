@@ -342,8 +342,6 @@ for (i in 1:k){
 
   c.index[i]=auc(m.roc)
 }
-c.index
-mean(c.index)
 cv_results = data.frame(Fold = c(1, 2, 3, 4),AUC = c.index)
 
 cv_results = rbind(cv_results, data.frame(Fold = "Mean", AUC = mean(c.index)))
@@ -389,32 +387,18 @@ Lastly, the coefficient for variable segregation length is 0.0001 with p-value o
 Logistic regression confirms that mental health alerts are the strongest and most reliable predictor of suicide risk alerts in this population. Gender and segregation length do not contribute significant independent explanatory power. These findings highlight the critical importance of mental health assessment and treatment in correctional settings for suicide prevention efforts.
 
 \newpage
+
 ## Final Summary
 
 Overall, the results in this report suggests that mental health alert is the strongest predictor of suicide risk alert in this data set. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In conclusion, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
 
 \newpage
+
 ## Appendix
 
-Contains code used in this report
+**Figure 1:**
 
-```{r appendix-setup, echo=TRUE, eval=FALSE}
-library(rattle)
-library(tidyverse)
-library(lubridate)
-library(dplyr)
-library(ggplot2)
-library(knitr)
-library(broom)
-library(pROC)
-
-seg = read.csv("solgen-individuals-in-seg-2018.csv")
-seg = seg %>% 
-  rename(Seg_length = Segregation.placement.length..in.days.) %>% 
-  rename(Reason = Primary.reason.for.segregation)
-```
-
-``` {r appendix-mental-health-plot, echo=TRUE, eval=FALSE}
+```{r eval=FALSE, message=FALSE, result="hide", echo= T}
 mental_suicide = seg %>% group_by(Mental.health.alert, Suicide.risk.alert) %>%
   summarise(count = n(), .groups = "drop") %>%
   group_by(Mental.health.alert) %>% mutate(percentage = count/sum(count) * 100)
@@ -431,7 +415,11 @@ ggplot(mental_suicide, aes(x = factor(Mental.health.alert),
   theme(plot.title = element_text(hjust = 0.5, face = "bold", size = rel(0.8)))
 ```
 
-``` {r appendix-outlier-table, echo=TRUE, eval=FALSE}
+For figure 1, we utilize the package ggplot, to plot a "histogram" in which we filled using Suicide risk alert variable to demonstrate the extent to which Mental health alert affect Suicide risk.
+
+**Table 1:**
+
+```{r eval=FALSE, message=FALSE, result="hide", echo= T}
 getting_outliers = function(seg_length){
   Q1 = quantile(seg_length, 0.25, na.rm = TRUE)
   Q3 = quantile(seg_length, 0.75, na.rm = TRUE)
@@ -463,7 +451,11 @@ kable(outlier_table,
       align = c('l', 'c', 'c', 'c', 'c'))
 ```
 
-``` {r appendix-boxplot, echo=TRUE, eval=FALSE}
+For table 1, we identifies and summarizes outliers in segregation length separately for individuals with and without suicide risk alerts. As we calculate the IQR and classifies any values beyond 1.5 times above Q3 or below Q1. The function help the code to not be repeated and applied to both groups which allow us to create a summary table.
+
+**Figure 2:**
+
+```{r eval=FALSE, message=FALSE, result="hide", echo= T}
 ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")), 
                           y = Seg_length)) +
   geom_boxplot(fill = c("lightblue", "salmon")) +
@@ -475,35 +467,35 @@ ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")),
   theme(plot.title = element_text(hjust = 0.5, face = "bold", size = rel(0.8)))
 ```
 
-``` {r appendix-gender-permutation, echo=TRUE, eval=FALSE}
-seg_perm_test = seg %>% 
-  mutate(Suicide_binary = case_when(Suicide.risk.alert == "Yes" ~ 1, TRUE ~ 0)) %>% 
-  select(Suicide_binary, Gender)
+For Figure 2, we used ggplot with geom_boxplot to visualize the distribution of segregation placement length across individuals with and without suicide risk alerts. Based on the outlier summary from Table 1, we truncated the y-axis at the 85th percentile to focus on the central tendency of the data and reduce visual distortion caused by extreme values. The boxplot allows for a visual comparison of medians and interquartile ranges between the two groups, providing initial insight into whether segregation length differs by suicide risk status.
 
-obs.diff = mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender == "Male"]) - 
-  mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender == "Female"])
+**Hypothesis testing(using permutation test) and bootstrapping for Confidence interval:**
+
+```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+seg_perm_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~1, TRUE ~ 0)) %>% select(Suicide_binary, Gender)
+obs.diff = mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Male"]) - mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Female"])
 
 perm.function = function(){
   temp_group_ind = sample(seg_perm_test$Gender)
-  d = mean(seg_perm_test$Suicide_binary[temp_group_ind == "Male"]) - 
-    mean(seg_perm_test$Suicide_binary[temp_group_ind == "Female"])
+  d = mean(seg_perm_test$Suicide_binary[temp_group_ind== "Male"]) - mean(seg_perm_test$Suicide_binary[temp_group_ind== "Female"])
   return(d)
 }
 
 boot.function = function(){
   boot_male = seg_perm_test %>% filter(Gender == "Male") %>% 
-    sample_n(n(), replace = TRUE)
+    sample_n(n(), replace=T)
   boot_female = seg_perm_test %>% filter(Gender == "Female") %>% 
-    sample_n(n(), replace = TRUE)
+    sample_n(n(), replace=T)
   
   d = mean(boot_male$Suicide_binary) - mean(boot_female$Suicide_binary)
   return(d)
 }
-
 set.seed(67)
+
 perm_diff = replicate(5000, perm.function())
 
 set.seed(67)
+
 ci_boot = replicate(1000, boot.function())
 
 ci = quantile(ci_boot, c(0.025, 0.975))
@@ -512,121 +504,92 @@ perm_df = data.frame(diff = perm_diff)
 ggplot(perm_df, aes(x = diff)) +
   geom_histogram(fill = "lightgray", color = "white", bins = 30) +
   geom_vline(xintercept = obs.diff, color = "blue", linewidth = 1.2) +
-  labs(title = "Figure 3. Permutation Distribution of Gender Differences in Suicide Risk",
+  labs(title = "Figure 3: Permutation Distribution of Gender Differences in Suicide Risk",
        x = "Difference in Proportion (Male - Female)",
        y = "Frequency") +
   theme_minimal() +
-  theme(plot.title = element_text(size = 10),
-        axis.title = element_text(size = 9),
-        axis.text = element_text(size = 8),
-        legend.text = element_text(size = 8))
+  theme(plot.title = element_text(size = 10),     axis.title = element_text(size = 9), axis.text = element_text(size = 8),legend.text = element_text(size = 8))
+
 ```
 
-``` {r appendix-gender-results-table, echo=TRUE, eval=FALSE}
-results_table = data.frame(
-  Statistic = c("Observed Difference (Male - Female)", 
-                "95% Confidence Interval", 
-                "P-value"),
-  Value = c("-0.0530", "(-0.105,-0.001)", "0.0474")
-)
+In this chunk of code above, we first prepares the data by creating a binary version of the suicide risk variable (where "Yes" becomes 1 and all other values become 0) and selecting only the suicide binary variable and gender. Then we calculate the observed difference in propotion of suicide risk between genders first. The important point is that there are two functions within the code, one of which is a permutation function that randomly shuffles the gender labels and recalculates the difference in proportions, and a bootstrap function that resamples with replacement separately for males and females before calculating the difference. In this way we would be able to perform hypothesis testing without making any assumption about the normality of the dataset and also bootstrapping help us to estimate the confidence interval better.
 
-kable(results_table, caption = "Permutation Test and Bootstrapping Results for Gender Differences in Suicide Risk")
-```
+We used the same process was applied to examine differences in suicide risk proportions by mental health alert status, with the mental health alert variable replacing gender in the data preparation and function definitions.
 
-``` {r appendix-mental-health-permutation, echo=TRUE, eval=FALSE}
-seg_mental_test = seg %>% 
-  mutate(Suicide_binary = case_when(Suicide.risk.alert == "Yes" ~ 1, TRUE ~ 0)) %>% 
-  select(Suicide_binary, Mental.health.alert)
+**Figure 5 and logistic regression model:**
 
-obs.diff_2 = mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert == "Yes"]) - 
-  mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert == "No"])
-
-perm_function_2 = function(){
-  temp_group_ind = sample(seg_mental_test$Mental.health.alert)
-  d = mean(seg_mental_test$Suicide_binary[temp_group_ind == "Yes"]) - 
-    mean(seg_mental_test$Suicide_binary[temp_group_ind == "No"])
-  return(d)
-}
-
-boot_function_2 = function(){
-  boot_yes = seg_mental_test %>% filter(Mental.health.alert == "Yes") %>% 
-    sample_n(n(), replace = TRUE)
-  boot_no = seg_mental_test %>% filter(Mental.health.alert == "No") %>% 
-    sample_n(n(), replace = TRUE)
-  
-  d = mean(boot_yes$Suicide_binary) - mean(boot_no$Suicide_binary)
-  return(d)
-}
-
-set.seed(67)
-perm_diff_2 = replicate(5000, perm_function_2())
-
-set.seed(67)
-boot_2 = replicate(1000, boot_function_2())
-
-ci_2 = quantile(boot_2, c(0.025, 0.975))
-
-perm_df_2 = data.frame(diff = perm_diff_2)
-ggplot(perm_df_2, aes(x = diff)) +
-  geom_histogram(fill = "lightgray", color = "white", bins = 30) +
-  geom_vline(xintercept = obs.diff_2, color = "blue", linewidth = 1.2) +
-  labs(title = "Figure 4. Permutation Distribution of Mental Health Differences in Suicide Risk",
-       x = "Difference in Proportion (With mental health - Without mental health)",
-       y = "Frequency") +
-  theme_minimal() +
-  theme(plot.title = element_text(size = 9),
-        axis.title = element_text(size = 9),
-        axis.text = element_text(size = 8),
-        legend.text = element_text(size = 8))
-```
-
-``` {r appendix-mental-health-results-table, echo=TRUE, eval=FALSE}
-results_table = data.frame(
-  Statistic = c("Observed Difference (With mental health - Without mental health)", 
-                "95% Confidence Interval", 
-                "P-value"),
-  Value = c("0.333", "(0.303, 0.3678)", "< 0.001")
-)
-
-kable(results_table, caption = "Permutation Test and Bootstrapping Results for Mental Health Differences in Suicide Risk")
-```
-
-``` {r appendix-logistic-regression, echo=TRUE, eval=FALSE}
+```{r eval=FALSE, message=FALSE, result="hide", echo= T}
 seg_regression = seg %>% 
-  mutate(
-    Suicide_binary = ifelse(Suicide.risk.alert == "Yes", 1, 0),
-    Mental_binary = ifelse(Mental.health.alert == "Yes", 1, 0),
-    Gender_binary = ifelse(Gender == "Male", 1, 0)
-  )
-
-m = glm(Suicide_binary ~ Gender_binary + Mental_binary + Seg_length,
-        family = binomial, data = seg_regression)
-
+  mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
+         Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
+         Gender_binary = ifelse(Gender == "Male",1,0))
+set.seed(67)
+m = glm(Suicide_binary ~ Gender_binary+Mental_binary + Seg_length, family = binomial, data = seg_regression)
 p = predict(m, type = "response")
 roc_logit = roc(seg_regression$Suicide_binary ~ p)
 auc_value = auc(roc_logit)
-
 ggroc(roc_logit, color = "red", size = 1.2) +
-  labs(title = "Figure 5. ROC Curve for Logistic Regression Model",
+  labs(title = "Figure 5: ROC Curve for Logistic Regression Model",
        subtitle = paste("Predicting Suicide Risk Alerts | AUC =", round(auc_value, 4)),
        x = "1 - Specificity (False Positive Rate)",
        y = "Sensitivity (True Positive Rate)") +
   annotate("text", x = 0.75, y = 0.25, 
            label = paste("AUC =", round(auc_value, 3)), 
-           size = 5, color = "red") +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
-        plot.subtitle = element_text(hjust = 0.5, size = 10),
-        axis.title = element_text(size = 11),
+           size = 5, color = "red") + theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12), plot.subtitle = element_text(hjust = 0.5, size = 10), axis.title = element_text(size = 11),
         axis.text = element_text(size = 9),
         panel.grid.major = element_line(color = "gray90"),
         panel.grid.minor = element_line(color = "gray95"))
 ```
 
-``` {r appendix-logistic-regression-table, echo=TRUE, eval=FALSE}
-results_table <- tidy(m) %>%
-  select(term, estimate, p.value) %>%
-  mutate(
+The logistic regression model is created by first turning all of the binary variable to 0 and 1and putting the suicide binary variable as the depedent variable. From this fitted model, we predict the probabilities for each observation using predict(). These predicted probabilities are then used to construct an ROC curve. And then we used ggroc() to plot the curve with customized labels and theme elements, while the auc() function calculates the Area Under the Curve as a summary measure of model performance.
+
+**Table 4 and 4-fold cross validation:**
+
+```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+k=4
+set.seed(67)
+seg_validate = seg %>% mutate(group_ind = sample(c(1:k), size = nrow(seg), replace = T))
+
+seg_validate = seg_validate %>% 
+  mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
+         Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
+         Gender_binary = ifelse(Gender == "Male",1,0))
+
+c.index = vector()
+for (i in 1:k){
+  d.train = seg_validate %>% filter(group_ind != i)
+  d.test = seg_validate %>% filter(group_ind == i)
+  
+  logit.mod = glm(Suicide_binary ~ Gender_binary + Mental_binary + Seg_length, 
+                  family = binomial, 
+                  data = d.train)
+  
+  pi_hat = predict(logit.mod, newdata=d.test, type = "response")
+  
+  m.roc=roc(d.test$Suicide_binary ~ pi_hat)
+
+  c.index[i]=auc(m.roc)
+}
+c.index
+mean(c.index)
+cv_results = data.frame(Fold = c(1, 2, 3, 4),AUC = c.index)
+
+cv_results = rbind(cv_results, data.frame(Fold = "Mean", AUC = mean(c.index)))
+
+kable(cv_results, 
+      caption = "4-Fold Cross-Validation Results for Logistic Regression Model",
+      col.names = c("Fold", "AUC"),
+      digits = 3)
+
+```
+
+We performed 4-fold cross-validation by first randomly assigning each observation in the dataset to one of four groups.A for loop then iterates through each fold, where three folds serve as training data to fit the logistic regression model, while the remaining fold serves as test data to evaluate model performance. For each iteration, the model predicts suicide risk probabilities on the test set, and the AUC is calculated to assess predictive accuracy. After all four folds are complete, the individual AUC values and their mean are displayed in a formatted table and thats how table 4 is created using the vector c.index as well as its mean.
+
+**Table 5:**
+
+```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+results_table = tidy(m) %>% select(term, estimate, p.value) %>%mutate(
     odds_ratio = exp(estimate),
     estimate = round(estimate, 3),
     odds_ratio = round(odds_ratio, 2),
@@ -639,5 +602,9 @@ results_table <- tidy(m) %>%
     "Odds Ratio" = odds_ratio
   )
 
+# Display table
 kable(results_table, caption = "Logistic Regression Results for Suicide Risk Alerts")
+
 ```
+
+In order to extract the logistic regression results easier, we utilize a tidy() function from the broom package. And then we only use the variables that we needed to and exponentiated the log odds ratios so that all values can be interpret easier.
