@@ -1,8 +1,10 @@
 ---
-title: "To what extent does mental health alerts, suicide risk alerts, gender and race group predict the length of segregation placement in Ontario correctional facilities in 2018"
-author: "Alex_nguyen"
+title: "To what extent does mental health alerts, length of segregation placement, gender and race group predict the suicide risk alert in Ontario correctional facilities in 2018"
+author: "Alex, Freddy, Jayden"
 date: "2026-03-22"
-output: pdf_document
+output:
+  pdf_document:
+    latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
@@ -10,10 +12,14 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r message=FALSE, include=FALSE}
+library(rattle)
 library(tidyverse)
 library(lubridate)
 library(dplyr)
 library(ggplot2)
+library(knitr)
+library(broom)
+library(pROC)
 seg = read.csv("solgen-individuals-in-seg-2018.csv")
 seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>% 
   rename(Reason = Primary.reason.for.segregation)
@@ -23,108 +29,317 @@ seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>%
 
 This data set contains individual-level records of incarcerated persons placed in segregation within Ontario correctional facilities. Each row represents one individual and includes demographic characteristics such as gender, age category, race group, and faith group. The data also captures clinical indicators including mental health alerts, suicide risk alerts, and suicide watch status. The key outcome variables measure segregation placement length in days and the primary reason for segregation placement.
 
-# Segregation
+## Segregation and Suicide Risk in Ontario
 
-Segregation (also known as solitary confinement) involves confining incarcerated individuals to their cells for 20-24 hours per day, with limited human contact. In Ontario, the use of segregation has been a subject of significant policy debate and legal scrutiny due to concerns about its psychological impacts, particularly on vulnerable populations. give citation
+Segregation involves confining imprisoned individuals to their cells for 20-24 hours per day, with limited human contact. In Ontario, the use of segregation has been a subject of significant policy debate due to concerns about its psychological impacts, especially on vulnerable populations.
 
-Research has consistently shown that individuals with mental health conditions and those at risk of suicide are disproportionately placed in segregation and often experience longer durations. However, questions remain about whether these disparities persist after accounting for other factors, and whether gender plays a role in segregation outcomes.
+Research has shown that individuals with mental health conditions are at elevated risk of suicide, and that segregation placement may exacerbate this risk. However, questions remain about the extent to which mental health status, segregation length, gender, and race independently predict suicide risk alerts in correctional settings.
 
-## What are the main reasons for segregation?
+This study addresses the following research question: To what extent do mental health alerts, length of segregation placement, gender, and race group predict suicide risk alerts in Ontario correctional facilities in 2018?
 
-To understand the meaning of data, we have to acknowledge the root cause of these numbers first. The following histogram illustrate different reasons to why an inmate may be required to go to segregation.
+### Relationship between variables
 
-```{r, echo = F}
+Before conducting formal hypothesis testing and logistic regression, we first examine the bivariate relationships between each predictor and the outcome variable, suicide risk alerts. These visualizations help assess whether relationships align with expectations, and inform which variables is important in the regression model. We begin by examining the relationship between mental health alerts and suicide risk alerts.
 
-seg_reason = seg %>%group_by(Reason) %>% summarise(n = n())
+#### Mental Health Alerts and Suicide Risk
 
-seg_reason = seg_reason%>%arrange(n)
+```{r echo=FALSE, fig.align="center", fig.width=5, fig.height=3}
+mental_suicide = seg %>% group_by(Mental.health.alert, Suicide.risk.alert) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(Mental.health.alert) %>% mutate(percentage = count/sum(count) * 100)
 
-seg_reason = seg_reason %>% mutate(Percentage = round(n/sum(seg_reason$n)*100,1))
-
-seg_reason = seg_reason %>%
-  mutate(Reason = case_when(
-    Reason == "inmate request" ~ "Inmate Request",
-    Reason == "inmate needs protection" ~ "Protect Inmate",
-    Reason == "inmate needs protection: medical" ~ "Protect Inmate: Medical",
-    Reason == "security of institution/safety of others" ~ "Security/Safety",
-    Reason == "security of institution/safety of others: medical" ~ "Security/Safety: Medical",
-    Reason == "alleged misconduct" ~ "Alleged Misconduct",
-    Reason == "close confinement" ~ "Close Confinement",
-    Reason == "multiple reasons" ~ "Multiple Reasons",
-    TRUE ~ "Other"
-  ))
-
-
-ggplot(seg_reason, aes(x = reorder(Reason, n), y = n)) +
-  geom_bar(stat = "identity", fill = "steelblue") + coord_flip() +
-  labs(title = "Figure 1: Primary Reasons for Segregation Placement",
-       subtitle = "Ontario Correctional Facilities, 2018", x = "Reason for Segregation", y = "Number of Individuals") +
-  theme_minimal() +
-  theme(plot.subtitle = element_text(hjust = 0.5)) +
-  geom_text(aes(label = paste0(Percentage, "%")), 
-            hjust = -0.2,  
-            size = 3.5)
+ggplot(mental_suicide, aes(x = factor(Mental.health.alert), 
+                           y = percentage, 
+                           fill = factor(Suicide.risk.alert, labels = c("No Suicide Risk", "Suicide Risk")))) +
+  geom_bar(stat = "identity", position = "fill") +
+  labs(title = "Figure 1. Proportion of Suicide Risk Alerts by Mental Health Status",
+       x = "Mental Health Alert", 
+       y = "Proportion",
+       fill = "Suicide Risk") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = rel(0.8)))
 ```
 
-Figure 1 displays the primary reasons individuals were placed in segregation in Ontario correctional facilities during 2018. The most common reason was "Protect inmate: Medical" with 771 cases associated to it, taking over 29.2% of the total reasons. Most notably, protection-related reasons including both medical and non-medical accounted for over 37% of placements, suggesting that a portion of segregation use is due to the concerns for inmate safety. Only 1.7% of placements were for "close confinement," indicating this category is relatively rare in practice. Acknowledging these trends can provide important context when analyzing segregation lengths as the reasons can influence duration.
+Figure 1 displays the proportion of individuals with suicide risk alerts stratified by mental health status. The stacked bar chart allows for direct comparison between two groups, including individuals without mental health alerts and individuals with mental health alerts.
 
-In addition, before delving into finding the relationships between variables, we must first understand how distributed the segregation placement length is. This is because understanding the distribution will allow us to see whether our data is left-skewed, contains outliers or have no particular trend.
+Among individuals without mental health alerts, approximately 25% have a suicide risk alert, meaning that three-quarters of this group show no suicide risk flag. On the other hand, among individuals with mental health alerts, approximately 50% have a suicide risk alert. We can observe a pattern that reveals a strong positive association between mental health status and suicide risk identification. Individuals flagged for mental health concerns are more likely to also be flagged for suicide risk compared to those without mental health alerts. The difference of approximately 25 percent suggests that mental health status may be the most important predictor of suicide risk in this sample.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-hist_data = ggplot_build(
-  ggplot(seg, aes(x = Seg_length)) + 
-    geom_histogram(bins = 30, fill = "steelblue", color = "white")
-)$data[[1]]
+This aligns with what is expected. Mental health conditions can be a risk factor for suicidal behavior. In the given settings, where mental health can be negated, it can easily lead to high suicidal risk.
 
-ggplot(seg, aes(x = Seg_length)) +
-  geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.7) +
-  labs(title = "Figure 2. Distribution of Segregation Placement Length",
-       x = "Days in Segregation", 
-       y = "Number of Individuals") +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
-        plot.title.position = "plot") +   geom_text(data = hist_data, aes(x = (xmin + xmax)/2, y = count, label = count),
-                                                    vjust = -0.5, 
-                                                    size = 2.5)
-```
+#### Segregation length and Suicide Risk \newline
 
-Figure 2 reveals a highly right-skewed distribution of segregation placement lengths. The most frequent duration is close to 0. But note that the segregation placement length is never zero. This happens due to the extreme outlines that skew the histogram. With around 2800 individuals experiencing segregation less than 100 days. While only up to 2 individuals had placements close to 600 days. This suggests that segregation is frequently used for brief periods, for immediate safety concerns. In addition, the skewness of our data highlights the need of bootstrapping in later analyses.
+Before examining the relationship between segregation length and suicide risk, we must first address the presence of extreme outliers in the segregation length variable. Table 1 summarizes the outlier statistics for individuals with and without suicide risk alerts.
 
-After acknowledging the root cause as well as the overall trend of our data-sets, we will now investigate the mean the segregation placement lengths across mental health alert, suicide risk alert, and gender.
-
-```{r}
-# Mean by mental health
-mental_summary = seg %>%
-  group_by(Mental.health.alert) %>% summarise(Count = n(),
-    Mean_days = mean(Seg_length),
-    SD = sd(Seg_length)
-  ) %>% rename(Group = Mental.health.alert)
-mental_summary = add_column(mental_summary, "Variable" =  rep("Mental health alert", 2), .before = "Group")
-
-
-# Mean by suicide risk
-suicide_summary = seg %>%
-  group_by(Suicide.risk.alert) %>% summarise(Count = n(),
-    Mean_days = mean(Seg_length),
-    SD = sd(Seg_length)
-  )%>% rename(Group = Suicide.risk.alert)
-
-suicide_summary = add_column(suicide_summary, "Variable" =  rep("Suicide risk alert", 2), .before = "Group")
-
-
-# Mean by gender
-gender_summary = seg %>%
-  group_by(Gender)%>% summarise(Count = n(),
-    Mean_days = mean(Seg_length),
-    SD = sd(Seg_length)
-  )%>% rename(Group = Gender)
+```{r echo=FALSE}
+getting_outliers = function(seg_length){
+  Q1 = quantile(seg_length, 0.25, na.rm = TRUE)
+  Q3 = quantile(seg_length, 0.75, na.rm = TRUE)
+  IQR = Q3 - Q1
+  lower_bound = Q1 - 1.5 * IQR
+  upper_bound = Q3 + 1.5 * IQR
+  outliers = seg_length[seg_length > upper_bound | seg_length < lower_bound]
+  return(list(outliers = outliers, upper_bound = upper_bound))
   
-gender_summary = add_column(gender_summary, "Variable" =  rep("Gender", 2), .before = "Group")
+}
 
-middle_summary= full_join(mental_summary, suicide_summary)
-final_summary = full_join(middle_summary, gender_summary)
-knitr::kable(final_summary)
+seg_no_risk = seg$Seg_length[seg$Suicide.risk.alert == "No"]
+seg_yes_risk = seg$Seg_length[seg$Suicide.risk.alert == "Yes"]
+
+outlier_no = getting_outliers(seg_no_risk)
+outlier_yes = getting_outliers(seg_yes_risk)
+outlier_table = data.frame(
+  Suicide_Risk = c("No", "Yes"),
+  Total_N = c(length(seg_no_risk), length(seg_yes_risk)),
+  Outlier_Count = c(length(outlier_no$outliers), length(outlier_yes$outliers)),
+  Outlier_Percent = c(round(length(outlier_no$outliers) / length(seg_no_risk) * 100, 1),
+                      round(length(outlier_yes$outliers) / length(seg_yes_risk) * 100, 1)),
+  Outlier_Range = c(paste(round(min(outlier_no$outliers), 1), "-", round(max(outlier_no$outliers), 1)),
+                    paste(round(min(outlier_yes$outliers), 1), "-", round(max(outlier_yes$outliers), 1)))
+)
+kable(outlier_table, 
+      caption = "Outlier Summary by Suicide Risk Status",
+      col.names = c("Suicide Risk", "Total N", "Outlier Count", "Outlier (%)", "Outlier Range"),
+      align = c('l', 'c', 'c', 'c', 'c'))
 ```
-fcfcfc
-hello alex hello freddy
-cdf
+
+Table 1 reveals that outliers are present in both groups at very high rates such as 14.0% of individuals without suicide risk alerts and 14.4% of individuals with suicide risk alerts are classified as outliers. This indicates that extreme segregation lengths are not disproportionately concentrated in either group. The outlier ranges extend up to approximately 600 days in both categories, demonstrating that while some individuals experience exceptionally long segregation placements, these extreme cases occur with similar frequency regardless of suicide risk status.
+
+As documented in Table 1, outliers are prevalent in both groups (14.0% and 14.4%), necessitating a truncated view of the data to focus on the central tendency. Figure 4 presents the distribution of segregation placement length by suicide risk status, with the y-axis limited to the 85th percentile to reduce visual distortion caused by extreme outliers.
+
+```{r echo=FALSE, fig.align="center", fig.width=5, fig.height=3}
+ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")), 
+                          y = Seg_length)) +
+  geom_boxplot(fill = c("lightblue", "salmon")) +
+  coord_cartesian(ylim = c(0, quantile(seg$Seg_length, 0.85))) +
+  labs(title = "Figure 2. Segregation Placement Length by Suicide Risk Status",
+       x = "Suicide Risk Alert", 
+       y = "Days in Segregation") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = rel(0.8)))
+```
+
+The boxplot reveals that individuals with suicide risk alerts have a mean segregation length only approximately 2 days higher than those without. Given the small magnitude of this difference and the substantial overlap in the interquartile ranges between groups, segregation length does not appear to be a strong or meaningful predictor of suicide risk status in this population. This suggests that other factors, such as mental health alerts, likely play a more important role in identifying individuals at risk of suicide later on when we do the regression.
+
+#### **Hypothesis testing** \newline
+
+Having explored the relationships between each predictor and suicide risk alerts through visualizations, we now turn to hypothesis testing between different groups. Hypothesis testing allows us to determine whether observed differences between groups are significant or likely due to random chance.
+
+##### Permutation Test for Gender Differences \newline
+
+This section focuses on the relationship between gender and suicide risk alerts. Specifically, we test whether the proportion of individuals with suicide risk alerts differs between males and females in Ontario correctional facilities in 2018. Because the data may not meet the normality assumptions required for a standard two-sample proportion test, we employ a permutation test. This approach involves randomly shuffling the gender labels across observations many times (5000 permutations) to generate a distribution of differences expected under the null hypothesis. The observed difference is then compared to this null distribution to determine the significance. Furthermore, the use of bootstrapping to calculate the confidence interval without any assumption about the sample.
+
+###### Null and Alternative Hypotheses:
+
+$$H_0: p_m = p_f$$
+
+$$H_1: p_m \neq p_f$$
+
+Where $p_m$ represents the true proportion of males with suicide risk alerts, and $p_f$ represents the true proportion of females with suicide risk alerts.
+
+```{r echo=F, fig.align="center", fig.width=5, fig.height=3}
+seg_perm_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~1, TRUE ~ 0)) %>% select(Suicide_binary, Gender)
+obs.diff = mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Male"]) - mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Female"])
+
+perm.function = function(){
+  temp_group_ind = sample(seg_perm_test$Gender)
+  d = mean(seg_perm_test$Suicide_binary[temp_group_ind== "Male"]) - mean(seg_perm_test$Suicide_binary[temp_group_ind== "Female"])
+  return(d)
+}
+
+boot.function = function(){
+  boot_male = seg_perm_test %>% filter(Gender == "Male") %>% 
+    sample_n(n(), replace=T)
+  boot_female = seg_perm_test %>% filter(Gender == "Female") %>% 
+    sample_n(n(), replace=T)
+  
+  d = mean(boot_male$Suicide_binary) - mean(boot_female$Suicide_binary)
+  return(d)
+}
+set.seed(67)
+
+perm_diff = replicate(5000, perm.function())
+
+set.seed(67)
+
+ci_boot = replicate(1000, boot.function())
+
+ci = quantile(ci_boot, c(0.025, 0.975))
+
+perm_df = data.frame(diff = perm_diff)
+ggplot(perm_df, aes(x = diff)) +
+  geom_histogram(fill = "lightgray", color = "white", bins = 30) +
+  geom_vline(xintercept = obs.diff, color = "blue", linewidth = 1.2) +
+  labs(title = "Figure 3: Permutation Distribution of Gender Differences in Suicide Risk",
+       x = "Difference in Proportion (Male - Female)",
+       y = "Frequency") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10),     axis.title = element_text(size = 9), axis.text = element_text(size = 8),legend.text = element_text(size = 8))
+
+
+##seg_perm_male = seg_perm_test %>% filter(Gender == "Male")
+##seg_perm_female = seg_perm_test %>% filter(Gender == "Female")
+##mean(seg_perm_male$Suicide_binary)
+##mean(seg_perm_female$Suicide_binary)
+##mean_diff = mean(seg_perm_male$Suicide_binary) - mean(seg_perm_female$Suicide_binary)
+##mean_diff
+# These numbers are the current mean. 
+```
+
+The permutation test and the bootstrap for the confidence interval yielded the following results:
+
+```{r echo=FALSE}
+results_table = data.frame(
+  Statistic = c("Observed Difference (Male - Female)", 
+                "95% Confidence Interval", 
+                "P-value"),
+  Value = c("-0.0530", "(-0.105,-0.001)", "0.0474")
+)
+kable(results_table, caption = "Permutation Test and Bootstrapping Results for Gender Differences in Suicide Risk")
+```
+
+Figure 3 displays the permutation distribution of differences in suicide risk proportions between males and females under the null hypothesis. The blue vertical line represents the observed difference in the actual data. The 95% confidence interval for the difference in proportions, based on bootstrap methods, ranges from -0.105 to -0.001. This interval does not cross zero, indicating that the true population difference is negative, meaning males have a lower proportion of suicide risk alerts than females.
+
+The observed difference in proportions was -0.053, indicating that males had a 5.3 percentage point lower proportion of suicide risk alerts compared to females. The p-value of 0.0474 is less than the conventional significance level of 0.05. This means that if the null hypothesis were true (no difference between genders), the probability of observing a difference as extreme as the one we observed is approximately 4.7%. Based on this p-value, we reject the null hypothesis at the α = 0.05 significance level. There is significant evidence that the proportion of suicide risk alerts differs between males and females in Ontario correctional facilities in 2018.
+
+While the confidence interval does not cross zero, the upper bound is extremely close to zero (-0.001), indicating that the true difference may be negligible. Second, the magnitude of the gender difference is small, only 5.3 percentage points. From a practical perspective, while gender may be a significant predictor of suicide risk alerts, its importance may be limited. The small effect size suggests that gender alone is unlikely to be a strong or reliable predictor of suicide risk. Other factors, such as mental health status, likely play a more meaningful role in identifying individuals at risk of suicide.
+
+##### Permutation Test for Mental Health Alert Differences \newline
+
+To formally evaluate the relationship between mental health alerts and suicide risk, we also conduct a permutation test (5000 permutations) under the null hypothesis of no difference between groups. We complement this with bootstrapping (1000 resamples) to construct a 95% confidence interval for the observed difference. This approach allows us to both test for significance and quantify the precision of our estimate.
+
+###### Null and Alternative Hypotheses:
+
+$$H_0: p_y = p_n$$
+
+$$H_1: p_y \neq p_n$$
+
+Where $p_y$ represents the true proportion of individuals with mental health alerts with suicide risk alerts, and $p_n$ represents the true proportion of individuals without mental health alerts with suicide risk alerts.
+
+```{r echo=F, fig.align="center", fig.width=5, fig.height=3}
+seg_mental_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~1, TRUE ~ 0)) %>% select(Suicide_binary, Mental.health.alert)
+
+obs.diff_2 = mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert== "Yes"]) - mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert== "No"])
+
+perm_function_2 = function(){
+  temp_group_ind = sample(seg_mental_test$Mental.health.alert, replace = T)
+  d = mean(seg_mental_test$Suicide_binary[temp_group_ind== "Yes"]) - mean(seg_mental_test$Suicide_binary[temp_group_ind== "No"])
+  return(d)
+}
+
+boot_function_2 = function(){
+  boot_yes = seg_mental_test %>% filter(Mental.health.alert == "Yes") %>% 
+    sample_n(n(), replace=T)
+  boot_no = seg_mental_test %>% filter(Mental.health.alert == "No") %>% 
+    sample_n(n(), replace=T)
+  
+  d = mean(boot_yes$Suicide_binary) - mean(boot_no$Suicide_binary)
+  return(d)
+}
+
+set.seed(67)
+perm_diff_2 = replicate(5000, perm_function_2())
+
+set.seed(67)
+boot_2 = replicate(1000, boot_function_2())
+
+ci_2 = quantile(boot_2, c(0.025, 0.975))
+
+perm_df_2 = data.frame(diff = perm_diff_2)
+ggplot(perm_df_2, aes(x = diff)) +
+  geom_histogram(fill = "lightgray", color = "white", bins = 30) +
+  geom_vline(xintercept = obs.diff_2, color = "blue", linewidth = 1.2) +
+  labs(title = "Figure 3: Permutation Distribution of Mental Health Differences in Suicide Risk",
+       x = "Difference in Proportion (With mental health - Without mental health)",
+       y = "Frequency") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 9),     axis.title = element_text(size = 9), axis.text = element_text(size = 8),legend.text = element_text(size = 8))
+```
+
+Permutation test and bootstrapping yielded the following result when comparing suicide risk between 2 groups of mental health alert:
+
+```{r echo=FALSE}
+results_table = data.frame(
+  Statistic = c("Observed Difference (With mental health - Without mental health)", 
+                "95% Confidence Interval", 
+                "P-value"),
+  Value = c("0.333", "(0.303, 0.3678)", "< 0.001")
+)
+kable(results_table, caption = "Permutation Test and Bootstrapping Results for Mental Health Differences in Suicide Risk")
+
+```
+
+The observed difference in proportions between individuals with and without mental health alerts is 0.333, meaning that individuals with mental health alerts have a 33.3 percentage point higher proportion of suicide risk alerts compared to those without mental health alerts. This aligns with the visual pattern observed in Figure 1, where approximately 57% of individuals with mental health alerts had suicide risk flags compared to only 24% of those without.
+
+The bootstrap 95% confidence interval ranges from 0.303 to 0.368. This interval does not cross zero, indicating that the true population difference is likely positive and substantial. We can be 95% confident that the true difference in proportions falls between 30.3 and 36.8 percentage points. In addition, the permutation test yielded a p-value of \< 0.001, which is below the significance level of 0.05. This means that if the null hypothesis were true (no difference between groups), the probability of observing a difference as extreme as 0.333 would be less than 0.1%.
+
+Based on these results, we reject the null hypothesis. There is strong statistical evidence that mental health alerts are associated with significantly higher proportions of suicide risk alerts in Ontario correctional facilities in 2018. These findings suggest that mental health status is a strong and reliable predictor of suicide risk identification in correctional settings. This aligns with existing research demonstrating the higher suicide risk among individuals with mental health conditions.
+
+## Logistic Regression Analysis
+
+Based on the analyses presented earlier, we anticipate that mental health status will be the strongest predictor of suicide risk alerts in the model. This prediction comes from the fact that the permutation test revealed a significant difference of 33.3 percentage points between individuals with and without mental health alerts (p \< 0.001). Also, the effect size for mental health was larger than that observed for gender (33.3% vs 5.3%). In contrast, we predict that gender and segregation length will not be significant predictors once mental health status is accounted for. While our permutation test found a marginal gender difference (p = 0.047), the effect was small (5.3 percentage points).
+
+To test these predictions, we utilize logistic regression. This method is designed for binary outcome variables, in our case, whether an individual has a suicide risk alert. Unlike linear regression, which assumes a continuous outcome, logistic regression models the probability of an event occurring and produces coefficients that can be interpreted as changes in log-odds, and when exponentiated, turn into odds ratios.
+
+The logistic regression model takes the following form:
+
+$$
+log(\frac{p}{1-p}) = \beta_0 + \beta_1(Gender) + \beta_2 (Mental\,health) + \beta_3(Segregation \,length)
+$$
+
+Where $p$ represents the probability of having a suicide risk alert, and the coefficients $\beta_1$​, $\beta_2$​​, and $\beta_3$​​ represent the unique contribution of each predictor while holding the others constant.
+
+```{r echo=FALSE, fig.align="center", fig.width=5, fig.height=3, message = F}
+seg_regression = seg %>% 
+  mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
+         Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
+         Gender_binary = ifelse(Gender == "Male",1,0))
+set.seed(67)
+m = glm(Suicide_binary ~ Gender_binary+Mental_binary + Seg_length, family = binomial, data = seg_regression)
+p = predict(m, type = "response")
+roc_logit = roc(seg_regression$Suicide_binary ~ p)
+auc_value = auc(roc_logit)
+ggroc(roc_logit, color = "red", size = 1.2) +
+  labs(title = "Figure 4: ROC Curve for Logistic Regression Model",
+       subtitle = paste("Predicting Suicide Risk Alerts | AUC =", round(auc_value, 4)),
+       x = "1 - Specificity (False Positive Rate)",
+       y = "Sensitivity (True Positive Rate)") +
+  annotate("text", x = 0.75, y = 0.25, 
+           label = paste("AUC =", round(auc_value, 3)), 
+           size = 5, color = "red") + theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12), plot.subtitle = element_text(hjust = 0.5, size = 10), axis.title = element_text(size = 11),
+        axis.text = element_text(size = 9),
+        panel.grid.major = element_line(color = "gray90"),
+        panel.grid.minor = element_line(color = "gray95"))
+```
+
+Before examining individual coefficients, we assess the overall performance of the model. The Area Under the Curve is 0.6761, indicating moderate discriminative ability. An AUC of 0.5 represents random guessing, while 1.0 represents perfect prediction. Our value of 0.676 suggests the model correctly distinguishes between individuals with and without suicide risk alerts approximately 68% of the time. This moderate AUC indicates that while our predictors are statistically significant in some cases, they do not fully capture the complexity of suicide risk identification in correctional settings. Other unmeasured factors, such as prior suicide attempts, current medication, access to mental health care, or institutional environment, can play more important roles.
+
+```{r echo=FALSE}
+results_table <- tidy(m) %>%
+  select(term, estimate, p.value) %>%
+  mutate(
+    odds_ratio = exp(estimate),
+    estimate = round(estimate, 3),
+    odds_ratio = round(odds_ratio, 2),
+    p.value = round(p.value, 4)
+  ) %>%
+  rename(
+    Predictor = term,
+    Coefficient = estimate,
+    "P-value" = p.value,
+    "Odds Ratio" = odds_ratio
+  )
+
+# Display table
+kable(results_table, caption = "Logistic Regression Results for Suicide Risk Alerts")
+```
+
+Each of the p-value in the table is calculated against the null hypothesis that the coefficient of the corresponding predictor should be 0. This means that if the p-value is too small, then we can reject the null hypothesis that the predictor/variable is not needed for this model.
+
+The coefficient for the Mental variable is 1.450 with a p-value less than 0.001, indicating a strong positive relationship with suicide risk alerts. To aid interpretation, we convert this to an odds ratio, which is 4.26. This means that individuals with mental health alerts have 4.26 times higher odds of having a suicide risk alert compared to those without mental health alerts, holding gender and segregation length constant.This finding aligns with our permutation test results and confirms that mental health status is the dominant predictor in the model. Even after accounting for gender and segregation length, the effect remains large and highly significant.
+
+On the other hand, the coefficient for the Gender variable is -0.042 with p-value of 0.723 which tells us that we have very weak evidence against the null hypothesis of the coefficient for the Gender variable to be 0. Also, the odds ratio is 0.96, indicating that males have approximately 4% lower odds of suicide risk alerts than females, but this effect is indistinguishable from zero. This result contrasts with our earlier permutation test, which found a gender difference, as the p-value from that section is 0.047. The discrepancy occurs because the permutation test examined gender in isolation, while the logistic regression controls for mental health status. Once mental health is accounted for, gender no longer contributes meaningful power.
+
+Lastly, the coefficient for variable segregation length is 0.0001 with p-value of 0.912 which tells us that we failed to reject our null hypothesis. In addition, the odds ratio is essentially 1.00, indicating that segregation length has no measurable association with suicide risk alerts after controlling for gender and mental health. While individuals with suicide risk alerts had slightly longer segregation placements in our descriptive analysis (approximately 2 days higher on average), this difference is unseen when mental health status is taken into account. This highlights that the mental health is the strongest predictor for suicide risk alert within this dataset.
+
+Logistic regression confirms that mental health alerts are the strongest and most reliable predictor of suicide risk alerts in this population. Gender and segregation length do not contribute significant independent explanatory power. These findings highlight the critical importance of mental health assessment and treatment in correctional settings for suicide prevention efforts.
