@@ -391,7 +391,7 @@ Logistic regression confirms that mental health alerts are the strongest and mos
 \newpage
 ## Final Summary
 
-Overall, the results in this report suggests that mental health alert is the strongest predictor of suicide risk alert in this data set. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In conclusion, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
+Overall, the results in this report suggest that mental health alert is the strongest predictor of suicide risk alert in this data set. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In addition, the 4-fold cross-validation results suggest that the logistic regression model has moderate predictive ability and is not strongly overfitted to the sample. In conclusion, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
 
 \newpage
 ## Appendix
@@ -621,6 +621,45 @@ ggroc(roc_logit, color = "red", size = 1.2) +
         axis.text = element_text(size = 9),
         panel.grid.major = element_line(color = "gray90"),
         panel.grid.minor = element_line(color = "gray95"))
+```
+
+```{r appendix-cross-validation, echo=TRUE, eval=FALSE}
+k=4
+set.seed(67)
+
+seg_validate = seg %>% 
+  mutate(group_ind = sample(c(1:k), size = nrow(seg), replace = T))
+
+seg_validate = seg_validate %>% 
+  mutate(
+    Suicide_binary = ifelse(Suicide.risk.alert == "Yes", 1, 0),
+    Mental_binary = ifelse(Mental.health.alert == "Yes", 1, 0),
+    Gender_binary = ifelse(Gender == "Male", 1, 0)
+  )
+
+c.index = vector()
+
+for (i in 1:k){
+  d.train = seg_validate %>% filter(group_ind != i)
+  d.test = seg_validate %>% filter(group_ind == i)
+  
+  logit.mod = glm(Suicide_binary ~ Gender_binary + Mental_binary + Seg_length, 
+                  family = binomial, 
+                  data = d.train)
+  
+  pi_hat = predict(logit.mod, newdata = d.test, type = "response")
+  
+  m.roc = roc(d.test$Suicide_binary ~ pi_hat)
+  c.index[i] = auc(m.roc)
+}
+
+cv_results = data.frame(Fold = c(1, 2, 3, 4), AUC = c.index)
+cv_results = rbind(cv_results, data.frame(Fold = "Mean", AUC = mean(c.index)))
+
+kable(cv_results, 
+      caption = "4-Fold Cross-Validation Results for Logistic Regression Model",
+      col.names = c("Fold", "AUC"),
+      digits = 3)
 ```
 
 ``` {r appendix-logistic-regression-table, echo=TRUE, eval=FALSE}
