@@ -343,3 +343,14 @@ On the other hand, the coefficient for the Gender variable is -0.042 with p-valu
 Lastly, the coefficient for variable segregation length is 0.0001 with p-value of 0.912 which tells us that we failed to reject our null hypothesis. In addition, the odds ratio is essentially 1.00, indicating that segregation length has no measurable association with suicide risk alerts after controlling for gender and mental health. While individuals with suicide risk alerts had slightly longer segregation placements in our descriptive analysis (approximately 2 days higher on average), this difference is unseen when mental health status is taken into account. This highlights that the mental health is the strongest predictor for suicide risk alert within this dataset.
 
 Logistic regression confirms that mental health alerts are the strongest and most reliable predictor of suicide risk alerts in this population. Gender and segregation length do not contribute significant independent explanatory power. These findings highlight the critical importance of mental health assessment and treatment in correctional settings for suicide prevention efforts.
+
+\pagebreak
+## Final Summary
+
+# please change if needed...
+
+Overall, the results in this report suggests that mental health alert is the strongest predictor of suicide risk alert in this data set. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In conclusion, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
+
+\pagebreak
+## Appendix
+# ????? do we need this
