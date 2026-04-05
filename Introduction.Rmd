@@ -104,7 +104,7 @@ kable(outlier_table,
 
 Table 1 reveals that outliers are present in both groups at very high rates such as 14.0% of individuals without suicide risk alerts and 14.4% of individuals with suicide risk alerts are classified as outliers. This indicates that extreme segregation lengths are not disproportionately concentrated in either group. The outlier ranges extend up to approximately 600 days in both categories, demonstrating that while some individuals experience exceptionally long segregation placements, these extreme cases occur with similar frequency regardless of suicide risk status.
 
-As documented in Table 1, outliers are prevalent in both groups (14.0% and 14.4%), necessitating a truncated view of the data to focus on the central tendency. Figure 4 presents the distribution of segregation placement length by suicide risk status, with the y-axis limited to the 85th percentile to reduce visual distortion caused by extreme outliers.
+As documented in Table 1, outliers are prevalent in both groups (14.0% and 14.4%), necessitating a truncated view of the data to focus on the central tendency. Figure 2 presents the distribution of segregation placement length by suicide risk status, with the y-axis limited to the 85th percentile to reduce visual distortion caused by extreme outliers.
 
 ```{r echo=FALSE, fig.align="center", fig.width=5, fig.height=3}
 ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")), 
@@ -221,7 +221,7 @@ seg_mental_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert =
 obs.diff_2 = mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert== "Yes"]) - mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert== "No"])
 
 perm_function_2 = function(){
-  temp_group_ind = sample(seg_mental_test$Mental.health.alert, replace = T)
+  temp_group_ind = sample(seg_mental_test$Mental.health.alert)
   d = mean(seg_mental_test$Suicide_binary[temp_group_ind== "Yes"]) - mean(seg_mental_test$Suicide_binary[temp_group_ind== "No"])
   return(d)
 }
