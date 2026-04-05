@@ -18,6 +18,7 @@ library(lubridate)
 library(dplyr)
 library(ggplot2)
 library(knitr)
+library(broom)
 seg = read.csv("solgen-individuals-in-seg-2018.csv")
 seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>% 
   rename(Reason = Primary.reason.for.segregation)
@@ -271,3 +272,75 @@ The observed difference in proportions between individuals with and without ment
 The bootstrap 95% confidence interval ranges from 0.303 to 0.368. This interval does not cross zero, indicating that the true population difference is likely positive and substantial. We can be 95% confident that the true difference in proportions falls between 30.3 and 36.8 percentage points. In addition, the permutation test yielded a p-value of \< 0.001, which is below the significance level of 0.05. This means that if the null hypothesis were true (no difference between groups), the probability of observing a difference as extreme as 0.333 would be less than 0.1%.
 
 Based on these results, we reject the null hypothesis. There is strong statistical evidence that mental health alerts are associated with significantly higher proportions of suicide risk alerts in Ontario correctional facilities in 2018. These findings suggest that mental health status is a strong and reliable predictor of suicide risk identification in correctional settings. This aligns with existing research demonstrating the higher suicide risk among individuals with mental health conditions.
+
+## Logistic Regression Analysis
+
+Based on the analyses presented earlier, we anticipate that mental health status will be the strongest predictor of suicide risk alerts in the model. This prediction comes from the fact that the permutation test revealed a significant difference of 33.3 percentage points between individuals with and without mental health alerts (p \< 0.001). Also, the effect size for mental health was larger than that observed for gender (33.3% vs 5.3%). In contrast, we predict that gender and segregation length will not be significant predictors once mental health status is accounted for. While our permutation test found a marginal gender difference (p = 0.047), the effect was small (5.3 percentage points).
+
+To test these predictions, we utilize logistic regression. This method is designed for binary outcome variables, in our case, whether an individual has a suicide risk alert. Unlike linear regression, which assumes a continuous outcome, logistic regression models the probability of an event occurring and produces coefficients that can be interpreted as changes in log-odds, and when exponentiated, turn into odds ratios.
+
+The logistic regression model takes the following form:
+
+$$
+log(\frac{p}{1-p}) = \beta_0 + \beta_1(Gender) + \beta_2 (Mental\,health) + \beta_3(Segregation \,length)
+$$
+
+Where $p$ represents the probability of having a suicide risk alert, and the coefficients $\beta_1$​, $\beta_2$​​, and $\beta_3$​​ represent the unique contribution of each predictor while holding the others constant.
+
+```{r}
+seg_regression = seg %>% 
+  mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
+         Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
+         Gender_binary = ifelse(Gender == "Male",1,0))
+set.seed(67)
+m = glm(Suicide_binary ~ Gender_binary+Mental_binary + Seg_length, family = binomial, data = seg_regression)
+summary(m)
+library(pROC)
+p = predict(m, type = "response")
+roc_logit = roc(seg_regression$Suicide_binary ~ p)
+auc_value = auc(roc_logit)
+ggroc(roc_logit, color = "red", size = 1.2) +
+  labs(title = "Figure 4: ROC Curve for Logistic Regression Model",
+       subtitle = paste("Predicting Suicide Risk Alerts | AUC =", round(auc_value, 4)),
+       x = "1 - Specificity (False Positive Rate)",
+       y = "Sensitivity (True Positive Rate)") +
+  annotate("text", x = 0.75, y = 0.25, 
+           label = paste("AUC =", round(auc_value, 3)), 
+           size = 5, color = "red") + theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 12), plot.subtitle = element_text(hjust = 0.5, size = 10), axis.title = element_text(size = 11),
+        axis.text = element_text(size = 9),
+        panel.grid.major = element_line(color = "gray90"),
+        panel.grid.minor = element_line(color = "gray95"))
+```
+
+Before examining individual coefficients, we assess the overall performance of the model. The Area Under the Curve is 0.6761, indicating moderate discriminative ability. An AUC of 0.5 represents random guessing, while 1.0 represents perfect prediction. Our value of 0.676 suggests the model correctly distinguishes between individuals with and without suicide risk alerts approximately 68% of the time. This moderate AUC indicates that while our predictors are statistically significant in some cases, they do not fully capture the complexity of suicide risk identification in correctional settings. Other unmeasured factors, such as prior suicide attempts, current medication, access to mental health care, or institutional environment, can play more important roles.
+
+```{r}
+results_table <- tidy(m) %>%
+  select(term, estimate, p.value) %>%
+  mutate(
+    odds_ratio = exp(estimate),
+    estimate = round(estimate, 3),
+    odds_ratio = round(odds_ratio, 2),
+    p.value = round(p.value, 4)
+  ) %>%
+  rename(
+    Predictor = term,
+    Coefficient = estimate,
+    "P-value" = p.value,
+    "Odds Ratio" = odds_ratio
+  )
+
+# Display table
+kable(results_table, caption = "Logistic Regression Results for Suicide Risk Alerts")
+```
+
+Each of the p-value in the table is calculated against the null hypothesis that the coefficient of the corresponding predictor should be 0. This means that if the p-value is too small, then we can reject the null hypothesis that the predictor/variable is not needed for this model.
+
+The coefficient for the Mental variable is 1.450 with a p-value less than 0.001, indicating a strong positive relationship with suicide risk alerts. To aid interpretation, we convert this to an odds ratio, which is 4.26. This means that individuals with mental health alerts have 4.26 times higher odds of having a suicide risk alert compared to those without mental health alerts, holding gender and segregation length constant.This finding aligns with our permutation test results and confirms that mental health status is the dominant predictor in the model. Even after accounting for gender and segregation length, the effect remains large and highly significant.
+
+On the other hand, the coefficient for the Gender variable is -0.042 with p-value of 0.723 which tells us that we have very weak evidence against the null hypothesis of the coefficient for the Gender variable to be 0. Also, the odds ratio is 0.96, indicating that males have approximately 4% lower odds of suicide risk alerts than females, but this effect is indistinguishable from zero. This result contrasts with our earlier permutation test, which found a gender difference, as the p-value from that section is 0.047. The discrepancy occurs because the permutation test examined gender in isolation, while the logistic regression controls for mental health status. Once mental health is accounted for, gender no longer contributes meaningful power.
+
+Lastly, the coefficient for variable segregation length is 0.0001 with p-value of 0.912 which tells us that we failed to reject our null hypothesis. In addition, the odds ratio is essentially 1.00, indicating that segregation length has no measurable association with suicide risk alerts after controlling for gender and mental health. While individuals with suicide risk alerts had slightly longer segregation placements in our descriptive analysis (approximately 2 days higher on average), this difference is unseen when mental health status is taken into account. This highlights that the mental health is the strongest predictor for suicide risk alert within this dataset.
+
+Logistic regression confirms that mental health alerts are the strongest and most reliable predictor of suicide risk alerts in this population. Gender and segregation length do not contribute significant independent explanatory power. These findings highlight the critical importance of mental health assessment and treatment in correctional settings for suicide prevention efforts.
