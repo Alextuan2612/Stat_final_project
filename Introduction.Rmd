@@ -413,6 +413,7 @@ Overall, the results in this report suggest that mental health alert is the stro
 **Figure 1:**
 
 ```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+# Making a summary table of segregated prisoners by the mental health and suicide risk alert 
 mental_suicide = seg %>% group_by(Mental.health.alert, Suicide.risk.alert) %>%
   summarise(count = n(), .groups = "drop") %>%
   group_by(Mental.health.alert) %>% mutate(percentage = count/sum(count) * 100)
@@ -571,22 +572,28 @@ seg_validate = seg_validate %>%
          Gender_binary = ifelse(Gender == "Male",1,0))
 
 c.index = vector()
+
+# Perform k-fold cross-validation
 for (i in 1:k){
+  # Split the data into training and test sets for this fold
   d.train = seg_validate %>% filter(group_ind != i)
   d.test = seg_validate %>% filter(group_ind == i)
   
+  # Fit the logistic model to the training set
   logit.mod = glm(Suicide_binary ~ Gender_binary + Mental_binary + Seg_length, 
                   family = binomial, 
                   data = d.train)
   
+  # Using the Gender_binary, Mental_binary and Seg_length to predict Suicide_binary in test data
   pi_hat = predict(logit.mod, newdata=d.test, type = "response")
   
+  # Comparing the observed data to the predicted data
   m.roc=roc(d.test$Suicide_binary ~ pi_hat)
 
+  # Calculating the auc for this particular test data
   c.index[i]=auc(m.roc)
 }
-c.index
-mean(c.index)
+
 cv_results = data.frame(Fold = c(1, 2, 3, 4),AUC = c.index)
 
 cv_results = rbind(cv_results, data.frame(Fold = "Mean", AUC = mean(c.index)))
