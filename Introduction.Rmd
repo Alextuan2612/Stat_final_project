@@ -26,11 +26,25 @@ seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>%
   rename(Reason = Primary.reason.for.segregation)
 ```
 
-# Introduction
+# 1. Description of the Dataset
+
+```{r}
+## [1] "Segregation_placement_length_(in_days)"
+## [2] "Gender"
+## [3] "Mental_health_alert"
+## [4] "Suicide_risk_alert"
+```
+
+1.  Segregation_placement_length\_(in_days): The length of the prisoner's segregation in days
+2.  Gender: A categorical variable indicating the gender of the individual segregated (Note: all the individuals in this data set is only male or female)
+3.  Mental_health_alert: A "Yes" or "No" variable that indicates whether the segregated prisoner is at risk of being affected by mental health conditions
+4.  Suicide_risk_alert: A "Yes" or "No" variable that indicates whether the segregated prisoner is at risk of committing suicide
+
+# 2. Background of the Dataset 
 
 This data set contains individual-level records of incarcerated persons placed in segregation within Ontario correctional facilities. Each row represents one individual and includes demographic characteristics such as gender, age category, race group, and faith group. The data also captures clinical indicators including mental health alerts, suicide risk alerts, and suicide watch status. The key outcome variables measure segregation placement length in days and the primary reason for segregation placement.
 
-## Segregation and Suicide Risk in Ontario
+## 3. Research Question: Segregation and Suicide Risk in Ontario
 
 Segregation involves confining imprisoned individuals to their cells for 20-24 hours per day, with limited human contact. In Ontario, the use of segregation has been a subject of significant policy debate due to concerns about its psychological impacts, especially on vulnerable populations.
 
