@@ -315,7 +315,7 @@ ggroc(roc_logit, color = "red", size = 1.2) +
 
 Before examining individual coefficients, we assess the overall performance of the model. The Area Under the Curve is 0.6761, indicating moderate discriminative ability. An AUC of 0.5 represents random guessing, while 1.0 represents perfect prediction. Our value of 0.676 suggests the model correctly distinguishes between individuals with and without suicide risk alerts approximately 68% of the time. This moderate AUC indicates that while our predictors are statistically significant in some cases, they do not fully capture the complexity of suicide risk identification in correctional settings. Other unmeasured factors, such as prior suicide attempts, current medication, access to mental health care, or institutional environment, can play more important roles.
 
-To validate the performance of our logistic regression model and ensure that the AUC value of 0.676 is not overfit to our specific sample, we performed 4-fold cross-validation. This technique involves randomly the dataset into four equally sized subsets. The model is then trained on three of the four folds (75% of the data) and tested on the remaining fold (25% of the data). This process is repeated four times, with each fold serving as the test set exactly once. The AUC is calculated for each iteration, and the average AUC across all four folds provides a more reliable estimate of how the model would perform on unseen data.
+To validate the performance of our logistic regression model and ensure that the AUC value of 0.676 is not overfit to our specific sample, we performed 4-fold cross-validation. This technique involves randomly the data set into four equally sized subsets. The model is then trained on three of the four folds (75% of the data) and tested on the remaining fold (25% of the data). This process is repeated four times, with each fold serving as the test set exactly once. The AUC is calculated for each iteration, and the average AUC across all four folds provides a more reliable estimate of how the model would perform on unseen data.
 
 ```{r echo=FALSE, message = F}
 k=4
@@ -353,7 +353,7 @@ kable(cv_results,
 
 ```
 
-The 4-fold cross-validation produced AUC values ranging from 0.651 to 0.691 across the four folds, with a mean AUC of 0.667. This mean is nearly identical to the original AUC of 0.676, differing by only 0.009. The small difference between the original and cross-validated AUC suggests that our model is not overfitted and is likely to generalize reasonably well to new data. Therefore, we can proceed to intepret the coefficient and determine whether the variables help to predict suicide risk alert or not.
+The 4-fold cross-validation produced AUC values ranging from 0.651 to 0.691 across the four folds, with a mean AUC of 0.667. This mean is nearly identical to the original AUC of 0.676, differing by only 0.009. The small difference between the original and cross-validated AUC suggests that our model is not overfitted and is likely to generalize reasonably well to new data. Therefore, we can proceed to interpret the coefficient and determine whether the variables help to predict suicide risk alert or not.
 
 ```{r echo=FALSE}
 results_table <- tidy(m) %>%
@@ -382,7 +382,7 @@ The coefficient for the Mental variable is 1.450 with a p-value less than 0.001,
 
 On the other hand, the coefficient for the Gender variable is -0.042 with p-value of 0.723 which tells us that we have very weak evidence against the null hypothesis of the coefficient for the Gender variable to be 0. Also, the odds ratio is 0.96, indicating that males have approximately 4% lower odds of suicide risk alerts than females, but this effect is indistinguishable from zero. This result contrasts with our earlier permutation test, which found a gender difference, as the p-value from that section is 0.047. The discrepancy occurs because the permutation test examined gender in isolation, while the logistic regression controls for mental health status. Once mental health is accounted for, gender no longer contributes meaningful power.
 
-Lastly, the coefficient for variable segregation length is 0.0001 with p-value of 0.912 which tells us that we failed to reject our null hypothesis. In addition, the odds ratio is essentially 1.00, indicating that segregation length has no measurable association with suicide risk alerts after controlling for gender and mental health. While individuals with suicide risk alerts had slightly longer segregation placements in our descriptive analysis (approximately 2 days higher on average), this difference is unseen when mental health status is taken into account. This highlights that the mental health is the strongest predictor for suicide risk alert within this dataset.
+Lastly, the coefficient for variable segregation length is 0.0001 with p-value of 0.912 which tells us that we failed to reject our null hypothesis. In addition, the odds ratio is essentially 1.00, indicating that segregation length has no measurable association with suicide risk alerts after controlling for gender and mental health. While individuals with suicide risk alerts had slightly longer segregation placements in our descriptive analysis (approximately 2 days higher on average), this difference is unseen when mental health status is taken into account. This highlights that the mental health is the strongest predictor for suicide risk alert within this data set.
 
 Logistic regression confirms that mental health alerts are the strongest and most reliable predictor of suicide risk alerts in this population. Gender and segregation length do not contribute significant independent explanatory power. These findings highlight the critical importance of mental health assessment and treatment in correctional settings for suicide prevention efforts.
 
@@ -390,7 +390,7 @@ Logistic regression confirms that mental health alerts are the strongest and mos
 
 ## Final Summary
 
-Overall, the results in this report suggests that mental health alert is the strongest predictor of suicide risk alert in this data set. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In conclusion, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
+Overall, the results in this report suggest that mental health alert is the strongest predictor of suicide risk alert in this dataset. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In addition, the 4-fold cross-validation results suggested that the logistic regression model has moderate predictive ability and is not strongly overfitted to the sample. Overall, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
 
 \newpage
 
@@ -451,7 +451,7 @@ kable(outlier_table,
       align = c('l', 'c', 'c', 'c', 'c'))
 ```
 
-For table 1, we identifies and summarizes outliers in segregation length separately for individuals with and without suicide risk alerts. As we calculate the IQR and classifies any values beyond 1.5 times above Q3 or below Q1. The function help the code to not be repeated and applied to both groups which allow us to create a summary table.
+For table 1, we identifies and summarizes outliers in segregation length separately for individuals with and without suicide risk alerts. As we calculate the IQR and classifies any values beyond 1.5 times above Q3 or below Q1. The function helps the code to not be repeated and applied to both groups which allow us to create a summary table.
 
 **Figure 2:**
 
@@ -512,7 +512,7 @@ ggplot(perm_df, aes(x = diff)) +
 
 ```
 
-In this chunk of code above, we first prepares the data by creating a binary version of the suicide risk variable (where "Yes" becomes 1 and all other values become 0) and selecting only the suicide binary variable and gender. Then we calculate the observed difference in propotion of suicide risk between genders first. The important point is that there are two functions within the code, one of which is a permutation function that randomly shuffles the gender labels and recalculates the difference in proportions, and a bootstrap function that resamples with replacement separately for males and females before calculating the difference. In this way we would be able to perform hypothesis testing without making any assumption about the normality of the dataset and also bootstrapping help us to estimate the confidence interval better.
+In this chunk of code above, we first prepares the data by creating a binary version of the suicide risk variable (where "Yes" becomes 1 and all other values become 0) and selecting only the suicide binary variable and gender. Then we calculate the observed difference in proportion of suicide risk between genders first. The important point is that there are two functions within the code, one of which is a permutation function that randomly shuffles the gender labels and recalculates the difference in proportions, and a bootstrap function that resamples with replacement separately for males and females before calculating the difference. In this way we would be able to perform hypothesis testing without making any assumption about the normality of the data set and also bootstrapping help us to estimate the confidence interval better.
 
 We used the same process was applied to examine differences in suicide risk proportions by mental health alert status, with the mental health alert variable replacing gender in the data preparation and function definitions.
 
@@ -542,7 +542,7 @@ ggroc(roc_logit, color = "red", size = 1.2) +
         panel.grid.minor = element_line(color = "gray95"))
 ```
 
-The logistic regression model is created by first turning all of the binary variable to 0 and 1and putting the suicide binary variable as the depedent variable. From this fitted model, we predict the probabilities for each observation using predict(). These predicted probabilities are then used to construct an ROC curve. And then we used ggroc() to plot the curve with customized labels and theme elements, while the auc() function calculates the Area Under the Curve as a summary measure of model performance.
+The logistic regression model is created by first turning all of the binary variable to 0 and 1 and putting the suicide binary variable as the dependent variable. From this fitted model, we predict the probabilities for each observation using predict(). These predicted probabilities are then used to construct an ROC curve. And then we used ggroc() to plot the curve with customized labels and theme elements, while the auc() function calculates the Area Under the Curve as a summary measure of model performance.
 
 **Table 4 and 4-fold cross validation:**
 
@@ -584,7 +584,7 @@ kable(cv_results,
 
 ```
 
-We performed 4-fold cross-validation by first randomly assigning each observation in the dataset to one of four groups.A for loop then iterates through each fold, where three folds serve as training data to fit the logistic regression model, while the remaining fold serves as test data to evaluate model performance. For each iteration, the model predicts suicide risk probabilities on the test set, and the AUC is calculated to assess predictive accuracy. After all four folds are complete, the individual AUC values and their mean are displayed in a formatted table and thats how table 4 is created using the vector c.index as well as its mean.
+We performed 4-fold cross-validation by first randomly assigning each observation in the data set to one of four groups.A for loop then iterates through each fold, where three folds serve as training data to fit the logistic regression model, while the remaining fold serves as test data to evaluate model performance. For each iteration, the model predicts suicide risk probabilities on the test set, and the AUC is calculated to assess predictive accuracy. After all four folds are complete, the individual AUC values and their mean are displayed in a formatted table and that is how table 4 is created using the vector c.index as well as its mean.
 
 **Table 5:**
 
