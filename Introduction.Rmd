@@ -40,7 +40,7 @@ seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>%
 3.  Mental_health_alert: A "Yes" or "No" variable that indicates whether the segregated prisoner is at risk of being affected by mental health conditions
 4.  Suicide_risk_alert: A "Yes" or "No" variable that indicates whether the segregated prisoner is at risk of committing suicide
 
-# 2. Background of the Dataset 
+# 2. Background of the Dataset
 
 This data set contains individual-level records of incarcerated persons placed in segregation within Ontario correctional facilities. Each row represents one individual and includes demographic characteristics such as gender, age category, race group, and faith group. The data also captures clinical indicators including mental health alerts, suicide risk alerts, and suicide watch status. The key outcome variables measure segregation placement length in days and the primary reason for segregation placement.
 
