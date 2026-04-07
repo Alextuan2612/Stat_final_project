@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r message=FALSE, include=FALSE}
+# loading libraries
 library(rattle)
 library(tidyverse)
 library(lubridate)
@@ -21,7 +22,9 @@ library(knitr)
 library(broom)
 library(pROC)
 library(rpart)
+# importing the file and naming the data set seg
 seg = read.csv("solgen-individuals-in-seg-2018.csv")
+# renaming problematic variables
 seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>% 
   rename(Reason = Primary.reason.for.segregation)
 ```
@@ -40,7 +43,7 @@ seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>%
 3.  Mental_health_alert: A "Yes" or "No" variable that indicates whether the segregated prisoner is at risk of being affected by mental health conditions
 4.  Suicide_risk_alert: A "Yes" or "No" variable that indicates whether the segregated prisoner is at risk of committing suicide
 
-# 2. Background of the Dataset 
+# 2. Background of the Dataset
 
 This data set contains individual-level records of incarcerated persons placed in segregation within Ontario correctional facilities. Each row represents one individual and includes demographic characteristics such as gender, age category, race group, and faith group. The data also captures clinical indicators including mental health alerts, suicide risk alerts, and suicide watch status. The key outcome variables measure segregation placement length in days and the primary reason for segregation placement.
 
@@ -59,10 +62,13 @@ Before conducting formal hypothesis testing and logistic regression, we first ex
 #### Mental Health Alerts and Suicide Risk
 
 ```{r echo=FALSE, fig.align="center", fig.width=5, fig.height=3}
+# Creating summary statistics of segregated inmates by mental health alert
+# and suicide watch alert
 mental_suicide = seg %>% group_by(Mental.health.alert, Suicide.risk.alert) %>%
   summarise(count = n(), .groups = "drop") %>%
   group_by(Mental.health.alert) %>% mutate(percentage = count/sum(count) * 100)
 
+# Creating a stacked bar plot
 ggplot(mental_suicide, aes(x = factor(Mental.health.alert), 
                            y = percentage, 
                            fill = factor(Suicide.risk.alert, labels = c("No Suicide Risk", "Suicide Risk")))) +
@@ -418,6 +424,7 @@ mental_suicide = seg %>% group_by(Mental.health.alert, Suicide.risk.alert) %>%
   summarise(count = n(), .groups = "drop") %>%
   group_by(Mental.health.alert) %>% mutate(percentage = count/sum(count) * 100)
 
+# Creating the stacked bar plot
 ggplot(mental_suicide, aes(x = factor(Mental.health.alert), 
                            y = percentage, 
                            fill = factor(Suicide.risk.alert, labels = c("No Suicide Risk", "Suicide Risk")))) +
@@ -435,6 +442,8 @@ For figure 1, we utilize the package ggplot, to plot a "histogram" in which we f
 **Table 1:**
 
 ```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+
+# Making a function that gathers a list of outliers of seg_length in the data
 getting_outliers = function(seg_length){
   Q1 = quantile(seg_length, 0.25, na.rm = TRUE)
   Q3 = quantile(seg_length, 0.75, na.rm = TRUE)
@@ -446,9 +455,11 @@ getting_outliers = function(seg_length){
   
 }
 
+# Splitting the data set 
 seg_no_risk = seg$Seg_length[seg$Suicide.risk.alert == "No"]
 seg_yes_risk = seg$Seg_length[seg$Suicide.risk.alert == "Yes"]
 
+# Getting the outliers within the two sets 
 outlier_no = getting_outliers(seg_no_risk)
 outlier_yes = getting_outliers(seg_yes_risk)
 outlier_table = data.frame(
