@@ -1,5 +1,5 @@
 ---
-title: "To what extent does mental health alerts, length of segregation placement, gender and race group predict the suicide risk alert in Ontario correctional facilities in 2018"
+title: "To what extent does mental health alerts, length of segregation placement, gender predict the suicide risk alert in Ontario correctional facilities in 2018"
 author: "Alex, Freddy, Jayden"
 date: "2026-03-22"
 output:
@@ -32,6 +32,8 @@ seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>%
 # 1. Description of the Dataset
 
 ```{r}
+seg = seg %>% select(Region, Gender, Mental.health.alert,Suicide.risk.alert, Seg_length )
+names(seg)
 ## [1] "Segregation_placement_length_(in_days)"
 ## [2] "Gender"
 ## [3] "Mental_health_alert"
@@ -42,12 +44,13 @@ seg = seg %>% rename(Seg_length = Segregation.placement.length..in.days.) %>%
 2.  Gender: A categorical variable indicating the gender of the individual segregated (Note: all the individuals in this data set is only male or female)
 3.  Mental_health_alert: A "Yes" or "No" variable that indicates whether the segregated prisoner is at risk of being affected by mental health conditions
 4.  Suicide_risk_alert: A "Yes" or "No" variable that indicates whether the segregated prisoner is at risk of committing suicide
+5.  Region: The name of the region that the individual is coming from.
 
 # 2. Background of the Dataset
 
-This data set contains individual-level records of incarcerated persons placed in segregation within Ontario correctional facilities. Each row represents one individual and includes demographic characteristics such as gender, age category, race group, and faith group. The data also captures clinical indicators including mental health alerts, suicide risk alerts, and suicide watch status. The key outcome variables measure segregation placement length in days and the primary reason for segregation placement.
+This dataset contains individual-level records of incarcerated persons placed in segregation within Ontario correctional facilities during 2018. It can be used for analysis and insights into the usage patterns and characteristics of segregation placements, including the primary reasons for segregation and the lengths of time individuals spend in segregation. The data is typically used by researchers, policymakers, correctional administrators, and advocacy groups to analyze segregation practices, evaluate compliance with legal standards, assess disparities across demographic groups, and inform correctional policy decisions regarding the use of solitary confinement. Overall, the segregation dataset for 2018 is a valuable resource for investigating the relationship between clinical indicators (such as mental health and suicide risk alerts) and segregation outcomes, examining demographic disparities in correctional practices, and contributing to evidence-based decision making in correctional policy and mental health service delivery.
 
-## 3. Research Question: Segregation and Suicide Risk in Ontario
+# 3. Research Question: Segregation and Suicide Risk in Ontario
 
 Segregation involves confining imprisoned individuals to their cells for 20-24 hours per day, with limited human contact. In Ontario, the use of segregation has been a subject of significant policy debate due to concerns about its psychological impacts, especially on vulnerable populations.
 
@@ -55,11 +58,11 @@ Research has shown that individuals with mental health conditions are at elevate
 
 This study addresses the following research question: To what extent do mental health alerts, length of segregation placement, gender, and race group predict suicide risk alerts in Ontario correctional facilities in 2018?
 
-### Relationship between variables
+# 4. Relationship between variables
 
 Before conducting formal hypothesis testing and logistic regression, we first examine the bivariate relationships between each predictor and the outcome variable, suicide risk alerts. These visualizations help assess whether relationships align with expectations, and inform which variables is important in the regression model. We begin by examining the relationship between mental health alerts and suicide risk alerts.
 
-#### Mental Health Alerts and Suicide Risk
+## 4.1 Mental Health Alerts and Suicide Risk
 
 ```{r echo=FALSE, fig.align="center", fig.width=5, fig.height=3}
 # Creating summary statistics of segregated inmates by mental health alert
@@ -87,7 +90,7 @@ Among individuals without mental health alerts, approximately 25% have a suicide
 
 This aligns with what is expected. Mental health conditions can be a risk factor for suicidal behavior. In the given settings, where mental health can be negated, it can easily lead to high suicidal risk.
 
-#### Segregation length and Suicide Risk \newline
+## 4.2 Segregation length and Suicide Risk \newline
 
 Before examining the relationship between segregation length and suicide risk, we must first address the presence of extreme outliers in the segregation length variable. Table 1 summarizes the outlier statistics for individuals with and without suicide risk alerts.
 
@@ -141,15 +144,29 @@ ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")),
 
 The boxplot reveals that individuals with suicide risk alerts have a mean segregation length only approximately 2 days higher than those without. Given the small magnitude of this difference and the substantial overlap in the interquartile ranges between groups, segregation length does not appear to be a strong or meaningful predictor of suicide risk status in this population. This suggests that other factors, such as mental health alerts, likely play a more important role in identifying individuals at risk of suicide later on when we do the regression.
 
-#### **Hypothesis testing** \newline
+## 4.3 Region and Suicide Risk \newline
+
+```{r}
+seg_table_region = seg %>% filter(Suicide.risk.alert == 'Yes') %>% group_by(Region) %>% summarize(num_individuals = n()) %>% arrange(desc(num_individuals))
+kable(seg_table_region, 
+      caption = "Number of Individuals with Suicide Risk Alerts by Region",
+      col.names = c("Region", "Number of Individuals"),
+      align = c('l', 'c'))
+```
+
+The table shows that the Central region has the highest number of individuals with suicide risk alerts (342), followed by the Eastern region (305). The Northern and Western regions both have 300 individuals each, the lowest among the four regions. While Central stands out with approximately 12-14% more cases than the other regions, the distribution across regions is relatively balanced, with all regions falling within a range of 300 to 342 individuals. This suggests that suicide risk alerts are present across all regions of Ontario's correctional system, with no single region dominating the total.
+
+The above table provides an insight about the distribution of individuals with suicide risk alert across different regions which in turn can help us understand the dataset more even though that we are utilizing this variable to predict our dependent variable.
+
+# **5. Hypothesis testing and bootstrapping** \newline
 
 Having explored the relationships between each predictor and suicide risk alerts through visualizations, we now turn to hypothesis testing between different groups. Hypothesis testing allows us to determine whether observed differences between groups are significant or likely due to random chance.
 
-##### Permutation Test for Gender Differences \newline
+## 5.1 Permutation Test for Gender Differences \newline
 
 This section focuses on the relationship between gender and suicide risk alerts. Specifically, we test whether the proportion of individuals with suicide risk alerts differs between males and females in Ontario correctional facilities in 2018. Because the data may not meet the normality assumptions required for a standard two-sample proportion test, we employ a permutation test. This approach involves randomly shuffling the gender labels across observations many times (5000 permutations) to generate a distribution of differences expected under the null hypothesis. The observed difference is then compared to this null distribution to determine the significance. Furthermore, the use of bootstrapping to calculate the confidence interval without any assumption about the sample.
 
-###### Null and Alternative Hypotheses:
+### Null and Alternative Hypotheses:
 
 $$H_0: p_m = p_f$$
 
@@ -224,11 +241,11 @@ The observed difference in proportions was -0.053, indicating that males had a 5
 
 While the confidence interval does not cross zero, the upper bound is extremely close to zero (-0.001), indicating that the true difference may be negligible. Second, the magnitude of the gender difference is small, only 5.3 percentage points. From a practical perspective, while gender may be a significant predictor of suicide risk alerts, its importance may be limited. The small effect size suggests that gender alone is unlikely to be a strong or reliable predictor of suicide risk. Other factors, such as mental health status, likely play a more meaningful role in identifying individuals at risk of suicide.
 
-##### Permutation Test for Mental Health Alert Differences \newline
+## 5.2 Permutation Test for Mental Health Alert Differences \newline
 
 To formally evaluate the relationship between mental health alerts and suicide risk, we also conduct a permutation test (5000 permutations) under the null hypothesis of no difference between groups. We complement this with bootstrapping (1000 resamples) to construct a 95% confidence interval for the observed difference. This approach allows us to both test for significance and quantify the precision of our estimate.
 
-###### Null and Alternative Hypotheses:
+### Null and Alternative Hypotheses:
 
 $$H_0: p_y = p_n$$
 
@@ -295,7 +312,7 @@ The bootstrap 95% confidence interval ranges from 0.303 to 0.368. This interval 
 
 Based on these results, we reject the null hypothesis. There is strong statistical evidence that mental health alerts are associated with significantly higher proportions of suicide risk alerts in Ontario correctional facilities in 2018. These findings suggest that mental health status is a strong and reliable predictor of suicide risk identification in correctional settings. This aligns with existing research demonstrating the higher suicide risk among individuals with mental health conditions.
 
-## Logistic Regression Analysis
+## 6. Logistic Regression Analysis
 
 Based on the analyses presented earlier, we anticipate that mental health status will be the strongest predictor of suicide risk alerts in the model. This prediction comes from the fact that the permutation test revealed a significant difference of 33.3 percentage points between individuals with and without mental health alerts (p \< 0.001). Also, the effect size for mental health was larger than that observed for gender (33.3% vs 5.3%). In contrast, we predict that gender and segregation length will not be significant predictors once mental health status is accounted for. While our permutation test found a marginal gender difference (p = 0.047), the effect was small (5.3 percentage points).
 
@@ -308,6 +325,8 @@ log(\frac{p}{1-p}) = \beta_0 + \beta_1(Gender) + \beta_2 (Mental\,health) + \bet
 $$
 
 Where $p$ represents the probability of having a suicide risk alert, and the coefficients $\beta_1$​, $\beta_2$​​, and $\beta_3$​​ represent the unique contribution of each predictor while holding the others constant.
+
+### 6.1 AUC analysis
 
 ```{r echo=FALSE, fig.align="center", fig.width=5, fig.height=3, message = F}
 seg_regression = seg %>% 
@@ -336,6 +355,8 @@ ggroc(roc_logit, color = "red", size = 1.2) +
 Before examining individual coefficients, we assess the overall performance of the model. The Area Under the Curve is 0.6761, indicating moderate discriminative ability. An AUC of 0.5 represents random guessing, while 1.0 represents perfect prediction. Our value of 0.676 suggests the model correctly distinguishes between individuals with and without suicide risk alerts approximately 68% of the time. This moderate AUC indicates that while our predictors are statistically significant in some cases, they do not fully capture the complexity of suicide risk identification in correctional settings. Other unmeasured factors, such as prior suicide attempts, current medication, access to mental health care, or institutional environment, can play more important roles.
 
 To validate the performance of our logistic regression model and ensure that the AUC value of 0.676 is not overfit to our specific sample, we performed 4-fold cross-validation. This technique involves randomly the data set into four equally sized subsets. The model is then trained on three of the four folds (75% of the data) and tested on the remaining fold (25% of the data). This process is repeated four times, with each fold serving as the test set exactly once. The AUC is calculated for each iteration, and the average AUC across all four folds provides a more reliable estimate of how the model would perform on unseen data.
+
+### 6.2 4-fold cross validation
 
 ```{r echo=FALSE, message = F}
 k=4
@@ -375,6 +396,8 @@ kable(cv_results,
 
 The 4-fold cross-validation produced AUC values ranging from 0.651 to 0.691 across the four folds, with a mean AUC of 0.667. This mean is nearly identical to the original AUC of 0.676, differing by only 0.009. The small difference between the original and cross-validated AUC suggests that our model is not overfitted and is likely to generalize reasonably well to new data. Therefore, we can proceed to interpret the coefficient and determine whether the variables help to predict suicide risk alert or not.
 
+### 6.3 Intepretation of the regression parameter
+
 ```{r echo=FALSE}
 results_table <- tidy(m) %>%
   select(term, estimate, p.value) %>%
@@ -406,13 +429,29 @@ Lastly, the coefficient for variable segregation length is 0.0001 with p-value o
 
 Logistic regression confirms that mental health alerts are the strongest and most reliable predictor of suicide risk alerts in this population. Gender and segregation length do not contribute significant independent explanatory power. These findings highlight the critical importance of mental health assessment and treatment in correctional settings for suicide prevention efforts.
 
-## Final Summary
+## 7. Final Summary
+
+-   Mental health alerts are the strongest predictor of suicide risk alerts. Individuals with mental health alerts have 4.26 times higher odds of having a suicide risk alert compared to those without, holding other factors constant.
+
+-   Gender shows a small, marginal effect in isolation (5.3 percentage point difference, p = 0.047), but this effect disappears when controlling for mental health status in the logistic regression (p = 0.723).
+
+-   Segregation length does not predict suicide risk after accounting for mental health status. While descriptive analysis showed a modest 2-day difference between groups, the logistic regression coefficient was essentially zero (OR = 1.00, p = 0.912).
+
+-   The Central region has the highest number of individuals with suicide risk alerts (342), while Northern and Western regions have the lowest (300 each), though distribution across regions is relatively balanced.
+
+-   Outliers are prevalent in segregation length data, with approximately 14% of individuals in both suicide risk groups classified as outliers, with placements extending up to 600 days.
+
+-   The logistic regression model shows modest predictive performance with an AUC of 0.676, indicating it correctly distinguishes between individuals with and without suicide risk alerts approximately 68% of the time.
+
+-   Cross-validation confirms the model is not overfitted, with a mean AUC of 0.667 across four folds, nearly identical to the original AUC of 0.676.
+
+We examined the relationship between mental health alerts and suicide risk, which revealed that individuals with mental health alerts had a 33.3 percentage point higher proportion of suicide risk alerts compared to those without (p \< 0.001). This finding aligns with existing clinical research demonstrating elevated suicide risk among individuals with mental health conditions in correctional settings. The bootstrap 95% confidence interval (0.303, 0.368) confirms this difference is substantial and does not include zero. In contrast, gender showed only a marginal effect (5.3 percentage point difference) that did not persist in the multivariable model, suggesting that the observed gender difference may be explained by underlying differences in mental health prevalence between males and females.
 
 Overall, the results in this report suggest that mental health alert is the strongest predictor of suicide risk alert in this dataset. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In addition, the 4-fold cross-validation results suggested that the logistic regression model has moderate predictive ability and is not strongly overfitted to the sample. Overall, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
 
 \newpage
 
-## Appendix
+## 8. Appendix
 
 **Figure 1:**
 
