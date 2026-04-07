@@ -435,7 +435,7 @@ ggplot(mental_suicide, aes(x = factor(Mental.health.alert),
   theme(plot.title = element_text(hjust = 0.5, face = "bold", size = rel(0.8)))
 ```
 
-For figure 1, we utilize the package ggplot, to plot a "histogram" in which we filled using Suicide risk alert variable to demonstrate the extent to which Mental health alert affect Suicide risk.
+For figure 1, we utilize the package ggplot, to plot a stacked bar plot in which we filled using Suicide risk alert variable to demonstrate the extent to which Mental health alert affect Suicide risk.
 
 **Table 1:**
 
@@ -460,6 +460,8 @@ seg_yes_risk = seg$Seg_length[seg$Suicide.risk.alert == "Yes"]
 # Getting the outliers within the two sets 
 outlier_no = getting_outliers(seg_no_risk)
 outlier_yes = getting_outliers(seg_yes_risk)
+
+# Creating a table as a data frame to store the information 
 outlier_table = data.frame(
   Suicide_Risk = c("No", "Yes"),
   Total_N = c(length(seg_no_risk), length(seg_yes_risk)),
@@ -469,6 +471,8 @@ outlier_table = data.frame(
   Outlier_Range = c(paste(round(min(outlier_no$outliers), 1), "-", round(max(outlier_no$outliers), 1)),
                     paste(round(min(outlier_yes$outliers), 1), "-", round(max(outlier_yes$outliers), 1)))
 )
+
+# Formatting the existing table
 kable(outlier_table, 
       caption = "Outlier Summary by Suicide Risk Status",
       col.names = c("Suicide Risk", "Total N", "Outlier Count", "Outlier (%)", "Outlier Range"),
@@ -480,6 +484,8 @@ For table 1, we identifies and summarizes outliers in segregation length separat
 **Figure 2:**
 
 ```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+# Creating a box plot
+
 ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")), 
                           y = Seg_length)) +
   geom_boxplot(fill = c("lightblue", "salmon")) +
@@ -496,15 +502,20 @@ For Figure 2, we used ggplot with geom_boxplot to visualize the distribution of 
 **Hypothesis testing(using permutation test) and bootstrapping for Confidence interval:**
 
 ```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+# Converting suicide risk alert into a numeric variable
 seg_perm_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~1, TRUE ~ 0)) %>% select(Suicide_binary, Gender)
+
+# Getting actual difference between male and female of the data set
 obs.diff = mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Male"]) - mean(seg_perm_test$Suicide_binary[seg_perm_test$Gender== "Female"])
 
+# Creating a function for permutation test
 perm.function = function(){
   temp_group_ind = sample(seg_perm_test$Gender)
   d = mean(seg_perm_test$Suicide_binary[temp_group_ind== "Male"]) - mean(seg_perm_test$Suicide_binary[temp_group_ind== "Female"])
   return(d)
 }
 
+# Creating a function for bootstrapping by gender
 boot.function = function(){
   boot_male = seg_perm_test %>% filter(Gender == "Male") %>% 
     sample_n(n(), replace=T)
@@ -514,17 +525,26 @@ boot.function = function(){
   d = mean(boot_male$Suicide_binary) - mean(boot_female$Suicide_binary)
   return(d)
 }
+
+# Setting the seed
 set.seed(67)
 
+# Repeating trials to get an accurate difference between mean of male and female
 perm_diff = replicate(5000, perm.function())
 
+# Setting the seed
 set.seed(67)
 
+# Repeating trials to get an accurate difference between mean of male and female
 ci_boot = replicate(1000, boot.function())
 
+# Getting the 95% confidence interval of the mean difference
 ci = quantile(ci_boot, c(0.025, 0.975))
 
+# Creating a data frame from perm_diff
 perm_df = data.frame(diff = perm_diff)
+
+# Creating a histogram
 ggplot(perm_df, aes(x = diff)) +
   geom_histogram(fill = "lightgray", color = "white", bins = 30) +
   geom_vline(xintercept = obs.diff, color = "blue", linewidth = 1.2) +
@@ -538,20 +558,86 @@ ggplot(perm_df, aes(x = diff)) +
 
 In this chunk of code above, we first prepares the data by creating a binary version of the suicide risk variable (where "Yes" becomes 1 and all other values become 0) and selecting only the suicide binary variable and gender. Then we calculate the observed difference in proportion of suicide risk between genders first. The important point is that there are two functions within the code, one of which is a permutation function that randomly shuffles the gender labels and recalculates the difference in proportions, and a bootstrap function that resamples with replacement separately for males and females before calculating the difference. In this way we would be able to perform hypothesis testing without making any assumption about the normality of the data set and also bootstrapping help us to estimate the confidence interval better.
 
+```{r}
+# Converting suicide risk alert into a numeric variable
+seg_mental_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~1, TRUE ~ 0)) %>% select(Suicide_binary, Mental.health.alert)
+
+# Getting actual difference between male and female of the data set
+obs.diff_2 = mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert== "Yes"]) - mean(seg_mental_test$Suicide_binary[seg_mental_test$Mental.health.alert== "No"])
+
+# Creating a function for permutation test
+perm_function_2 = function(){
+  temp_group_ind = sample(seg_mental_test$Mental.health.alert)
+  d = mean(seg_mental_test$Suicide_binary[temp_group_ind== "Yes"]) - mean(seg_mental_test$Suicide_binary[temp_group_ind== "No"])
+  return(d)
+}
+
+# Creating a function for bootstrapping by gender
+boot_function_2 = function(){
+  boot_yes = seg_mental_test %>% filter(Mental.health.alert == "Yes") %>% 
+    sample_n(n(), replace=T)
+  boot_no = seg_mental_test %>% filter(Mental.health.alert == "No") %>% 
+    sample_n(n(), replace=T)
+  
+  d = mean(boot_yes$Suicide_binary) - mean(boot_no$Suicide_binary)
+  return(d)
+}
+
+# Setting the seed
+set.seed(67)
+
+# Repeating trials to get an accurate difference between mean of male and female
+perm_diff_2 = replicate(5000, perm_function_2())
+
+# Setting the seed
+set.seed(67)
+
+# Repeating trials to get an accurate difference between mean of male and female
+boot_2 = replicate(1000, boot_function_2())
+
+# Getting the 95% confidence interval 
+ci_2 = quantile(boot_2, c(0.025, 0.975))
+
+# Creating a data frame from perm_diff_2
+perm_df_2 = data.frame(diff = perm_diff_2)
+
+# Creating a histogram
+ggplot(perm_df_2, aes(x = diff)) +
+  geom_histogram(fill = "lightgray", color = "white", bins = 30) +
+  geom_vline(xintercept = obs.diff_2, color = "blue", linewidth = 1.2) +
+  labs(title = "Figure 4: Permutation Distribution of Mental Health Differences in Suicide Risk",
+       x = "Difference in Proportion (With mental health - Without mental health)",
+       y = "Frequency") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 9),     axis.title = element_text(size = 9), axis.text = element_text(size = 8),legend.text = element_text(size = 8))
+```
+
 We used the same process was applied to examine differences in suicide risk proportions by mental health alert status, with the mental health alert variable replacing gender in the data preparation and function definitions.
 
 **Figure 5 and logistic regression model:**
 
 ```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+# Creating numeric variables to represent suicide risk, mental health risk and gender
 seg_regression = seg %>% 
   mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
          Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
          Gender_binary = ifelse(Gender == "Male",1,0))
+# Setting the seed
 set.seed(67)
+
+# Creating a model with logistic regression
 m = glm(Suicide_binary ~ Gender_binary+Mental_binary + Seg_length, family = binomial, data = seg_regression)
+
+# Predicting the test data with the model
 p = predict(m, type = "response")
+
+# Creating the roc curve with the prediction
 roc_logit = roc(seg_regression$Suicide_binary ~ p)
+
+# Calculating the auc of the roc curve
 auc_value = auc(roc_logit)
+
+# Plotting the model
 ggroc(roc_logit, color = "red", size = 1.2) +
   labs(title = "Figure 5: ROC Curve for Logistic Regression Model",
        subtitle = paste("Predicting Suicide Risk Alerts | AUC =", round(auc_value, 4)),
@@ -571,15 +657,23 @@ The logistic regression model is created by first turning all of the binary vari
 **Table 4 and 4-fold cross validation:**
 
 ```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+
+# Indicating the number of folds 
 k=4
+
+# Setting the seed
 set.seed(67)
+
+# Folding the data into k-folds
 seg_validate = seg %>% mutate(group_ind = sample(c(1:k), size = nrow(seg), replace = T))
 
+# Converting suicide-risk, mental health risk, gender into numeric variables
 seg_validate = seg_validate %>% 
   mutate(Suicide_binary = ifelse(Suicide.risk.alert == "Yes",1,0),
          Mental_binary = ifelse(Mental.health.alert == "Yes",1,0),
          Gender_binary = ifelse(Gender == "Male",1,0))
 
+# Creating an empty vector
 c.index = vector()
 
 # Perform k-fold cross-validation
@@ -603,10 +697,13 @@ for (i in 1:k){
   c.index[i]=auc(m.roc)
 }
 
+# Creating a data frame to display auc for each fold
 cv_results = data.frame(Fold = c(1, 2, 3, 4),AUC = c.index)
 
+# Adding a row to display the mean auc for the folds
 cv_results = rbind(cv_results, data.frame(Fold = "Mean", AUC = mean(c.index)))
 
+# Displaying the table
 kable(cv_results, 
       caption = "4-Fold Cross-Validation Results for Logistic Regression Model",
       col.names = c("Fold", "AUC"),
@@ -619,6 +716,7 @@ We performed 4-fold cross-validation by first randomly assigning each observatio
 **Table 5:**
 
 ```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+# Creating a table consisting of regression parameters
 results_table = tidy(m) %>% select(term, estimate, p.value) %>%mutate(
     odds_ratio = exp(estimate),
     estimate = round(estimate, 3),
