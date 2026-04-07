@@ -90,7 +90,7 @@ Among individuals without mental health alerts, approximately 25% have a suicide
 
 This aligns with what is expected. Mental health conditions can be a risk factor for suicidal behavior. In the given settings, where mental health can be negated, it can easily lead to high suicidal risk.
 
-## 4.2 Segregation length and Suicide Risk \newline
+## 4.2 Segregation length and Suicide Risk
 
 Before examining the relationship between segregation length and suicide risk, we must first address the presence of extreme outliers in the segregation length variable. Table 1 summarizes the outlier statistics for individuals with and without suicide risk alerts.
 
@@ -144,7 +144,7 @@ ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")),
 
 The boxplot reveals that individuals with suicide risk alerts have a mean segregation length only approximately 2 days higher than those without. Given the small magnitude of this difference and the substantial overlap in the interquartile ranges between groups, segregation length does not appear to be a strong or meaningful predictor of suicide risk status in this population. This suggests that other factors, such as mental health alerts, likely play a more important role in identifying individuals at risk of suicide later on when we do the regression.
 
-## 4.3 Region and Suicide Risk \newline
+## 4.3 Region and Suicide Risk
 
 ```{r}
 seg_table_region = seg %>% filter(Suicide.risk.alert == 'Yes') %>% group_by(Region) %>% summarize(num_individuals = n()) %>% arrange(desc(num_individuals))
@@ -158,13 +158,13 @@ The table shows that the Central region has the highest number of individuals wi
 
 The above table provides an insight about the distribution of individuals with suicide risk alert across different regions which in turn can help us understand the dataset more even though that we are utilizing this variable to predict our dependent variable.
 
-# **5. Hypothesis testing and bootstrapping** \newline
+# **5. Hypothesis testing and bootstrapping**
 
 Having explored the relationships between each predictor and suicide risk alerts through visualizations, we now turn to hypothesis testing between different groups. Hypothesis testing allows us to determine whether observed differences between groups are significant or likely due to random chance.
 
-## 5.1 Permutation Test for Gender Differences \newline
+## 5.1 Permutation Test for Gender Differences
 
-This section focuses on the relationship between gender and suicide risk alerts. Specifically, we test whether the proportion of individuals with suicide risk alerts differs between males and females in Ontario correctional facilities in 2018. Because the data may not meet the normality assumptions required for a standard two-sample proportion test, we employ a permutation test. This approach involves randomly shuffling the gender labels across observations many times (5000 permutations) to generate a distribution of differences expected under the null hypothesis. The observed difference is then compared to this null distribution to determine the significance. Furthermore, the use of bootstrapping to calculate the confidence interval without any assumption about the sample.
+This section focuses on the relationship between gender and suicide risk alerts. Specifically, we test whether the proportion of individuals with suicide risk alerts differs between segregated males and females in Ontario correctional facilities in 2018. Because the data may not meet the normality assumptions required for a standard two-sample proportion test, we employ a permutation test. This approach involves randomly shuffling the gender labels across observations many times (5000 permutations) to generate a distribution of differences expected under the null hypothesis. The observed difference is then compared to this null distribution to determine the significance. Furthermore, the use of bootstrapping to calculate the confidence interval without any assumption about the sample.
 
 ### Null and Alternative Hypotheses:
 
@@ -235,13 +235,13 @@ results_table = data.frame(
 kable(results_table, caption = "Permutation Test and Bootstrapping Results for Gender Differences in Suicide Risk")
 ```
 
-Figure 3 displays the permutation distribution of differences in suicide risk proportions between males and females under the null hypothesis. The blue vertical line represents the observed difference in the actual data. The 95% confidence interval for the difference in proportions, based on bootstrap methods, ranges from -0.105 to -0.001. This interval does not cross zero, indicating that the true population difference is negative, meaning males have a lower proportion of suicide risk alerts than females.
+Figure 3 displays the permutation distribution of differences in suicide risk proportions between segregated males and females under the null hypothesis. The blue vertical line represents the observed difference in the actual data. The 95% confidence interval for the difference in proportions, based on bootstrap methods, ranges from -0.105 to -0.001. This interval does not cross zero, indicating that the true population difference is negative, meaning males have a lower proportion of suicide risk alerts than females.
 
-The observed difference in proportions was -0.053, indicating that males had a 5.3 percentage point lower proportion of suicide risk alerts compared to females. The p-value of 0.0474 is less than the conventional significance level of 0.05. This means that if the null hypothesis were true (no difference between genders), the probability of observing a difference as extreme as the one we observed is approximately 4.7%. Based on this p-value, we reject the null hypothesis at the α = 0.05 significance level. There is significant evidence that the proportion of suicide risk alerts differs between males and females in Ontario correctional facilities in 2018.
+The observed difference in proportions was -0.053, indicating that males had a 5.3 percentage point lower proportion of suicide risk alerts compared to females. The p-value of 0.0474 is less than the conventional significance level of 0.05. This means that if the null hypothesis were true (no difference between genders), the probability of observing a difference as extreme as the one we observed is approximately 4.7%. Based on this p-value, we reject the null hypothesis at the α = 0.05 significance level. There is significant evidence that the proportion of suicide risk alerts differs between segregated males and females in Ontario correctional facilities in 2018.
 
 While the confidence interval does not cross zero, the upper bound is extremely close to zero (-0.001), indicating that the true difference may be negligible. Second, the magnitude of the gender difference is small, only 5.3 percentage points. From a practical perspective, while gender may be a significant predictor of suicide risk alerts, its importance may be limited. The small effect size suggests that gender alone is unlikely to be a strong or reliable predictor of suicide risk. Other factors, such as mental health status, likely play a more meaningful role in identifying individuals at risk of suicide.
 
-## 5.2 Permutation Test for Mental Health Alert Differences \newline
+## 5.2 Permutation Test for Mental Health Alert Differences
 
 To formally evaluate the relationship between mental health alerts and suicide risk, we also conduct a permutation test (5000 permutations) under the null hypothesis of no difference between groups. We complement this with bootstrapping (1000 resamples) to construct a 95% confidence interval for the observed difference. This approach allows us to both test for significance and quantify the precision of our estimate.
 
@@ -432,20 +432,14 @@ Logistic regression confirms that mental health alerts are the strongest and mos
 ## 7. Final Summary
 
 -   Mental health alerts are the strongest predictor of suicide risk alerts. Individuals with mental health alerts have 4.26 times higher odds of having a suicide risk alert compared to those without, holding other factors constant.
-
 -   Gender shows a small, marginal effect in isolation (5.3 percentage point difference, p = 0.047), but this effect disappears when controlling for mental health status in the logistic regression (p = 0.723).
-
 -   Segregation length does not predict suicide risk after accounting for mental health status. While descriptive analysis showed a modest 2-day difference between groups, the logistic regression coefficient was essentially zero (OR = 1.00, p = 0.912).
-
 -   The Central region has the highest number of individuals with suicide risk alerts (342), while Northern and Western regions have the lowest (300 each), though distribution across regions is relatively balanced.
-
 -   Outliers are prevalent in segregation length data, with approximately 14% of individuals in both suicide risk groups classified as outliers, with placements extending up to 600 days.
-
 -   The logistic regression model shows modest predictive performance with an AUC of 0.676, indicating it correctly distinguishes between individuals with and without suicide risk alerts approximately 68% of the time.
-
 -   Cross-validation confirms the model is not overfitted, with a mean AUC of 0.667 across four folds, nearly identical to the original AUC of 0.676.
 
-We examined the relationship between mental health alerts and suicide risk, which revealed that individuals with mental health alerts had a 33.3 percentage point higher proportion of suicide risk alerts compared to those without (p \< 0.001). This finding aligns with existing clinical research demonstrating elevated suicide risk among individuals with mental health conditions in correctional settings. The bootstrap 95% confidence interval (0.303, 0.368) confirms this difference is substantial and does not include zero. In contrast, gender showed only a marginal effect (5.3 percentage point difference) that did not persist in the multivariable model, suggesting that the observed gender difference may be explained by underlying differences in mental health prevalence between males and females.
+We examined the relationship between mental health alerts and suicide risk, which revealed that individuals with mental health alerts had a 33.3 percentage point higher proportion of suicide risk alerts compared to those without (p \< 0.001). This finding aligns with existing clinical research demonstrating elevated suicide risk among individuals with mental health conditions in correctional settings. The bootstrap 95% confidence interval (0.303, 0.368) confirms this difference is substantial and does not include zero. In contrast, gender showed only a marginal effect (5.3 percentage point difference) that did not persist in the multivariable model, suggesting that the observed gender difference may be explained by underlying differences in mental health prevalence between segregated males and females.
 
 Overall, the results in this report suggest that mental health alert is the strongest predictor of suicide risk alert in this dataset. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In addition, the 4-fold cross-validation results suggested that the logistic regression model has moderate predictive ability and is not strongly overfitted to the sample. Overall, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
 
@@ -538,6 +532,18 @@ ggplot(seg, aes(x = factor(Suicide.risk.alert, labels = c("No", "Yes")),
 
 For Figure 2, we used ggplot with geom_boxplot to visualize the distribution of segregation placement length across individuals with and without suicide risk alerts. Based on the outlier summary from Table 1, we truncated the y-axis at the 85th percentile to focus on the central tendency of the data and reduce visual distortion caused by extreme values. The boxplot allows for a visual comparison of medians and interquartile ranges between the two groups, providing initial insight into whether segregation length differs by suicide risk status.
 
+**Table 2:**
+
+```{r eval=FALSE, message=FALSE, result="hide", echo= T}
+# Filter out individual with suicide risk and then group by region to see which region contains most
+seg_table_region = seg %>% filter(Suicide.risk.alert == 'Yes') %>% group_by(Region) %>% summarize(num_individuals = n()) %>% arrange(desc(num_individuals))
+kable(seg_table_region, 
+      caption = "Number of Individuals with Suicide Risk Alerts by Region",
+      col.names = c("Region", "Number of Individuals"),
+      align = c('l', 'c'))
+
+```
+
 **Hypothesis testing(using permutation test) and bootstrapping for Confidence interval:**
 
 ```{r eval=FALSE, message=FALSE, result="hide", echo= T}
@@ -567,19 +573,14 @@ boot.function = function(){
 
 # Setting the seed
 set.seed(67)
-
 # Repeating trials to get an accurate difference between mean of male and female
 perm_diff = replicate(5000, perm.function())
-
 # Setting the seed
 set.seed(67)
-
 # Repeating trials to get an accurate difference between mean of male and female
 ci_boot = replicate(1000, boot.function())
-
 # Getting the 95% confidence interval of the mean difference
 ci = quantile(ci_boot, c(0.025, 0.975))
-
 # Creating a data frame from perm_diff
 perm_df = data.frame(diff = perm_diff)
 
@@ -595,9 +596,9 @@ ggplot(perm_df, aes(x = diff)) +
 
 ```
 
-In this chunk of code above, we first prepares the data by creating a binary version of the suicide risk variable (where "Yes" becomes 1 and all other values become 0) and selecting only the suicide binary variable and gender. Then we calculate the observed difference in proportion of suicide risk between genders first. The important point is that there are two functions within the code, one of which is a permutation function that randomly shuffles the gender labels and recalculates the difference in proportions, and a bootstrap function that resamples with replacement separately for males and females before calculating the difference. In this way we would be able to perform hypothesis testing without making any assumption about the normality of the data set and also bootstrapping help us to estimate the confidence interval better.
+In this chunk of code above, we first prepares the data by creating a binary version of the suicide risk variable (where "Yes" becomes 1 and all other values become 0) and selecting only the suicide binary variable and gender. Then we calculate the observed difference in proportion of suicide risk between genders first. We used two functions, one for bootstrapping and one for permutation test to recalculate the mean difference. In this way we would be able to perform hypothesis testing without making any assumption about the normality of the data set and also bootstrapping help us to estimate the confidence interval better.
 
-```{r}
+```{r eval=FALSE, message=FALSE, result="hide", echo= T}
 # Converting suicide risk alert into a numeric variable
 seg_mental_test = seg %>% mutate(Suicide_binary = case_when(Suicide.risk.alert == 'Yes' ~1, TRUE ~ 0)) %>% select(Suicide_binary, Mental.health.alert)
 
@@ -624,19 +625,14 @@ boot_function_2 = function(){
 
 # Setting the seed
 set.seed(67)
-
 # Repeating trials to get an accurate difference between mean of male and female
 perm_diff_2 = replicate(5000, perm_function_2())
-
 # Setting the seed
 set.seed(67)
-
 # Repeating trials to get an accurate difference between mean of male and female
 boot_2 = replicate(1000, boot_function_2())
-
 # Getting the 95% confidence interval 
 ci_2 = quantile(boot_2, c(0.025, 0.975))
-
 # Creating a data frame from perm_diff_2
 perm_df_2 = data.frame(diff = perm_diff_2)
 
