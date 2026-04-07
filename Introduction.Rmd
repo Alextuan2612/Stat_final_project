@@ -406,8 +406,6 @@ Lastly, the coefficient for variable segregation length is 0.0001 with p-value o
 
 Logistic regression confirms that mental health alerts are the strongest and most reliable predictor of suicide risk alerts in this population. Gender and segregation length do not contribute significant independent explanatory power. These findings highlight the critical importance of mental health assessment and treatment in correctional settings for suicide prevention efforts.
 
-\newpage
-
 ## Final Summary
 
 Overall, the results in this report suggest that mental health alert is the strongest predictor of suicide risk alert in this dataset. Individuals with mental health alerts had a substantially higher proportion of suicide risk alerts, and this pattern was supported by both the permutation test and the bootstrap confidence interval. Gender showed a small difference in the two-group comparison, but it was no longer significant after controlling for mental health alert and segregation length in the logistic regression model. Segregation length also did not appear to be an important independent predictor. In addition, the 4-fold cross-validation results suggested that the logistic regression model has moderate predictive ability and is not strongly overfitted to the sample. Overall, mental health status appears to play the most important role in identifying suicide risk alerts in Ontario correctional facilities in 2018.
